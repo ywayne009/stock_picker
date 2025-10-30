@@ -2,6 +2,33 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+---
+
+## 🚀 Starting a New Session (READ THIS FIRST!)
+
+**When you start working on this project, follow these steps:**
+
+1. **Read PROJECT_STATUS.md** - This tells you exactly where the project is and what to work on next
+2. **Check the git log** - `git log --oneline -5` to see recent changes
+3. **Review last session notes** - Bottom of PROJECT_STATUS.md has session log
+4. **Ask the user** - "What would you like to work on today?"
+5. **Update PROJECT_STATUS.md** - When you finish your session
+
+**Quick Context Check:**
+```bash
+# Where am I?
+pwd  # Should be: /Users/wayne/main/labs/stock_picker
+
+# What's the latest?
+git status
+git log --oneline -3
+
+# What needs to be done?
+cat PROJECT_STATUS.md | grep "Next Steps" -A 10
+```
+
+---
+
 ## Project Overview
 
 This is an AI-powered stock picking tool designed for professional traders. The system integrates real-time and historical market data, maintains a repository of trading strategies, supports backtesting, and leverages AI for strategy generation and optimization.
