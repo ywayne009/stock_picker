@@ -2,6 +2,8 @@
 
 AI-powered stock picking and backtesting platform for professional traders.
 
+[![GitHub Repository](https://img.shields.io/badge/GitHub-stock__picker-blue?logo=github)](https://github.com/ywayne009/stock_picker)
+
 ## Features
 
 - Historical and real-time market data integration
