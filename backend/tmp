@@ -1,0 +1,270 @@
+
+================================================================================
+  MOVING AVERAGE CROSSOVER STRATEGY DEMO
+================================================================================
+
+1. Generating sample market data...
+   ✓ Generated 366 days of data
+   ✓ Price range: $82.57 - $114.24
+
+2. Testing Custom MA Crossover (20/50 SMA)...
+
+================================================================================
+Testing: MovingAverageCrossover(fast=20, slow=50, type=SMA)
+================================================================================
+
+================================================================================
+  MovingAverageCrossover(fast=20, slow=50, type=SMA)
+================================================================================
+
+Total Trading Days: 366
+Buy Signals: 5
+Sell Signals: 5
+
+📈 BUY SIGNALS:
+Date         Price      Fast MA    Slow MA   
+--------------------------------------------------
+2023-03-23   $   87.07 $   87.89 $   87.84
+2023-05-07   $   90.04 $   86.93 $   86.87
+2023-06-19   $   90.81 $   86.99 $   86.84
+2023-09-19   $  104.04 $  102.32 $  102.24
+2023-11-03   $  102.39 $   98.38 $   98.10
+
+📉 SELL SIGNALS:
+Date         Price      Fast MA    Slow MA   
+--------------------------------------------------
+2023-04-13   $   83.74 $   87.14 $   87.35
+2023-05-28   $   83.29 $   86.05 $   86.17
+2023-09-13   $  102.73 $  101.19 $  101.29
+2023-09-21   $   97.50 $  101.99 $  102.02
+2023-12-21   $  107.35 $  108.46 $  108.47
+
+📊 BASIC METRICS:
+  First Signal: 2023-03-23
+  Last Signal: 2023-12-21
+  Average Days Between Signals: 36.6
+  Current Position: FLAT
+
+3. Testing Golden Cross (50/200 SMA)...
+
+================================================================================
+Testing: MovingAverageCrossover(fast=50, slow=200, type=SMA)
+================================================================================
+
+================================================================================
+  MovingAverageCrossover(fast=50, slow=200, type=SMA)
+================================================================================
+
+Total Trading Days: 366
+Buy Signals: 0
+Sell Signals: 0
+
+4. Testing Fast MA Crossover (10/30 EMA)...
+
+================================================================================
+Testing: MovingAverageCrossover(fast=10, slow=30, type=EMA)
+================================================================================
+
+================================================================================
+  MovingAverageCrossover(fast=10, slow=30, type=EMA)
+================================================================================
+
+Total Trading Days: 366
+Buy Signals: 10
+Sell Signals: 9
+
+📈 BUY SIGNALS:
+Date         Price      Fast MA    Slow MA   
+--------------------------------------------------
+2023-03-14   $   89.98 $   88.00 $   87.89
+2023-03-24   $   89.02 $   88.28 $   88.26
+2023-04-02   $   89.76 $   88.36 $   88.22
+2023-04-30   $   87.80 $   86.21 $   86.09
+2023-06-12   $   87.71 $   86.02 $   85.82
+2023-07-22   $   93.12 $   92.08 $   92.00
+2023-09-07   $  101.50 $  100.46 $  100.45
+2023-09-10   $  104.22 $  101.12 $  100.68
+2023-10-27   $  100.25 $   98.04 $   97.73
+2024-01-01   $  108.86 $  107.58 $  107.51
+
+📉 SELL SIGNALS:
+Date         Price      Fast MA    Slow MA   
+--------------------------------------------------
+2023-03-23   $   87.07 $   88.12 $   88.20
+2023-03-26   $   87.29 $   88.11 $   88.20
+2023-04-06   $   86.00 $   87.92 $   88.10
+2023-05-15   $   84.93 $   86.95 $   87.13
+2023-07-20   $   90.83 $   91.90 $   91.94
+2023-09-05   $   98.24 $  100.10 $  100.34
+2023-09-08   $   99.60 $  100.31 $  100.39
+2023-09-22   $   97.15 $  101.05 $  101.49
+2023-12-14   $  104.81 $  108.85 $  109.21
+
+📊 BASIC METRICS:
+  First Signal: 2023-03-14
+  Last Signal: 2024-01-01
+  Average Days Between Signals: 19.3
+  Current Position: LONG
+
+================================================================================
+  STRATEGY COMPARISON
+================================================================================
+
+Strategy             Buy Signals     Sell Signals    Total Signals  
+----------------------------------------------------------------------
+MA 20/50 SMA         5               5               10             
+Golden Cross 50/200  0               0               0              
+Fast 10/30 EMA       10              9               19             
+
+================================================================================
+  POSITION SIZING EXAMPLE
+================================================================================
+
+SCENARIO: You have a $100,000 portfolio
+Strategy uses 10.0% position sizing
+
+BUY Signal:
+  Portfolio Value: $100,000.00
+  Current Price: $108.86
+  Shares to Trade: 91.86
+  Position Value: $10,000.00
+  % of Portfolio: 10.0%
+  → This allows you to hold up to 10 positions
+
+SELL Signal:
+  Portfolio Value: $100,000.00
+  Current Price: $108.86
+  Shares to Trade: 91.86
+  Position Value: $10,000.00
+  % of Portfolio: 10.0%
+  → This allows you to hold up to 10 positions
+
+================================================================================
+  RISK MANAGEMENT EXAMPLE
+================================================================================
+
+SCENARIO: You bought 100 shares at $100.00
+Position value: $10,000.00
+
+Entry Price: $100.00
+Stop Loss: 5.0% ($95.00)
+Take Profit: 15.0% ($115.00)
+
+Risk/Reward Ratio: 3.0:1
+
+Current Price   % Change     Action     Reason
+-----------------------------------------------------------------
+$95.00            -5.0%      CLOSE      Hit stop loss - cut losses
+$92.00            -8.0%      CLOSE      Hit stop loss - cut losses
+$105.00            5.0%      HOLD       Within acceptable range
+$115.00           15.0%      CLOSE      Hit take profit - lock in gains
+$120.00           20.0%      CLOSE      Hit take profit - lock in gains
+
+================================================================================
+  PARAMETER TUNING TIPS
+================================================================================
+
+HOW TO ADAPT THIS STRATEGY TO YOUR PORTFOLIO:
+
+STEP 1: Define Your Investment Profile
+--------------------------------------------------
+  Ask yourself:
+  - What's my time horizon? (days, weeks, months, years)
+  - How much risk can I tolerate?
+  - How often can I monitor positions?
+  - What's my portfolio size?
+  - What assets am I trading? (stocks, crypto, forex, etc.)
+
+STEP 2: Choose Appropriate MA Periods
+--------------------------------------------------
+  Day Trading:       5/15, 10/20, 10/30
+  Swing Trading:     10/30, 15/45, 20/50
+  Position Trading:  20/50, 30/100, 50/150
+  Long-term:         50/200, 100/300
+
+STEP 3: Select MA Type Based on Speed Needs
+--------------------------------------------------
+  SMA: More stable, fewer false signals, better for long-term
+  EMA: More responsive, faster signals, better for short-term
+
+STEP 4: Set Position Size Based on Risk Tolerance
+--------------------------------------------------
+  Conservative:  5-10%  (allows 10-20 positions)
+  Moderate:     10-20%  (allows 5-10 positions)
+  Aggressive:   20-30%  (allows 3-5 positions)
+
+STEP 5: Configure Stop Loss for Asset Volatility
+--------------------------------------------------
+  Low volatility (blue chips):     3-5%
+  Medium volatility (most stocks): 5-10%
+  High volatility (small caps):   10-15%
+  Very high volatility (crypto):  15-25%
+
+STEP 6: Set Take Profit at 2-3x Your Stop Loss
+--------------------------------------------------
+  If stop_loss = 5%, set take_profit = 10-15%
+  If stop_loss = 10%, set take_profit = 20-30%
+  This ensures favorable risk/reward ratio
+
+STEP 7: Backtest and Refine
+--------------------------------------------------
+  - Test on historical data
+  - Measure: Win rate, average profit/loss, max drawdown
+  - Adjust if: Too many signals, too few signals, poor win rate
+  - Remember: Past performance doesn't guarantee future results
+
+EXAMPLE TUNING SCENARIOS:
+--------------------------------------------------
+
+  Scenario: Too many false signals in ranging market
+  Solution: ↑ Increase MA periods (e.g., 20/50 → 30/100)
+           ↑ Switch from EMA to SMA for smoothing
+           ↑ Add filters (volume, RSI, trend confirmation)
+
+  Scenario: Missing quick reversals
+  Solution: ↓ Decrease MA periods (e.g., 50/200 → 20/50)
+           ↓ Switch from SMA to EMA for responsiveness
+           ↓ Consider dual timeframe strategy
+
+  Scenario: Getting stopped out too often
+  Solution: ↑ Widen stop loss based on ATR or volatility
+           → Calculate average swing range for your asset
+           → Set stop just beyond normal price fluctuation
+
+  Scenario: Missing profit targets (price reverses before target)
+  Solution: ↓ Lower take profit target
+           → Use trailing stop instead of fixed target
+           → Consider pyramiding (scale out at multiple levels)
+
+ADVANCED ADAPTATIONS:
+--------------------------------------------------
+  1. Multiple Timeframes:
+     - Use longer timeframe (daily) for trend direction
+     - Use shorter timeframe (hourly) for entry timing
+
+  2. Volatility-Based Position Sizing (already built-in):
+     - Pass volatility parameter to calculate_position_size()
+     - Automatically reduces size for volatile assets
+
+  3. Market Regime Filters:
+     - Only trade when market is trending (ADX > 25)
+     - Avoid trading in ranging markets
+     - Add volume confirmation for signals
+
+  4. Portfolio-Level Risk Management:
+     - Limit total exposure (e.g., max 50% invested at once)
+     - Correlate positions to avoid concentrated risk
+     - Use position sizing to balance across sectors
+
+
+================================================================================
+  DEMO COMPLETE!
+================================================================================
+
+Next steps:
+  1. Modify the config parameters above to match your profile
+  2. Test with real historical data for your target assets
+  3. Integrate with the backtesting engine (coming soon)
+  4. Paper trade before going live
+  5. Monitor and refine based on actual performance
+

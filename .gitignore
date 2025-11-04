@@ -74,3 +74,9 @@ logs/
 # Alembic
 alembic/versions/*.py
 !alembic/versions/__init__.py
+
+# Generated charts and visualizations
+backend/output/charts/*.html
+backend/output/charts/*.png
+backend/output/charts/*.pdf
+!backend/output/charts/.gitkeep
