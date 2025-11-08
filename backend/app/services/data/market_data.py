@@ -6,7 +6,7 @@ Currently supports Yahoo Finance via yfinance library and CSV files.
 """
 import pandas as pd
 import yfinance as yf
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, List
 from datetime import datetime, timedelta
 from pathlib import Path
 import os
@@ -86,11 +86,11 @@ def fetch_stock_data(
 
 
 def fetch_multiple_stocks(
-    symbols: list,
+    symbols: List[str],
     start_date: str,
     end_date: str,
     interval: str = '1d'
-) -> dict:
+) -> Dict[str, pd.DataFrame]:
     """
     Fetch data for multiple stocks.
 
@@ -125,7 +125,7 @@ def fetch_multiple_stocks(
     return results
 
 
-def get_stock_info(symbol: str) -> dict:
+def get_stock_info(symbol: str) -> Dict[str, any]:
     """
     Get company information for a stock.
 
@@ -161,7 +161,7 @@ def get_stock_info(symbol: str) -> dict:
         }
 
 
-def get_popular_stocks() -> dict:
+def get_popular_stocks() -> Dict[str, List[str]]:
     """
     Get a dictionary of popular stocks for testing.
 
@@ -182,7 +182,7 @@ def get_popular_stocks() -> dict:
     }
 
 
-def validate_data_quality(data: pd.DataFrame, symbol: str = "Stock") -> Tuple[bool, list]:
+def validate_data_quality(data: pd.DataFrame, symbol: str = "Stock") -> Tuple[bool, List[str]]:
     """
     Validate the quality of fetched data.
 
@@ -341,7 +341,7 @@ def load_csv_data(
 def fetch_demo_stock(
     symbol: str = 'AAPL',
     years_back: int = 2
-) -> Tuple[pd.DataFrame, dict]:
+) -> Tuple[pd.DataFrame, Dict[str, any]]:
     """
     Fetch stock data for demo purposes with automatic date range.
 

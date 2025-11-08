@@ -10,6 +10,9 @@ import numpy as np
 from typing import Optional, List, Dict, Any, Union
 import webbrowser
 from pathlib import Path
+import subprocess
+import platform
+import os
 
 from .chart_themes import (
     get_theme,
@@ -21,6 +24,67 @@ from .chart_themes import (
     COLORS
 )
 from .performance_metrics import PerformanceMetrics, calculate_metrics
+
+
+def is_wsl() -> bool:
+    """Check if running in WSL (Windows Subsystem for Linux)."""
+    try:
+        with open('/proc/version', 'r') as f:
+            return 'microsoft' in f.read().lower()
+    except:
+        return False
+
+
+def open_browser_wsl(filepath: str) -> bool:
+    """
+    Open a file in the default Windows browser from WSL.
+
+    Args:
+        filepath: Path to the HTML file (Linux path)
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        # Convert WSL path to Windows path
+        result = subprocess.run(
+            ['wslpath', '-w', filepath],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        windows_path = result.stdout.strip()
+
+        # Open in Windows default browser
+        # cmd.exe /c start "" "path" - the empty "" is for the window title
+        subprocess.run(
+            ['cmd.exe', '/c', 'start', '', windows_path],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        return True
+    except Exception as e:
+        print(f"Warning: Could not auto-open browser in WSL: {e}")
+        print(f"Please manually open: {filepath}")
+        return False
+
+
+def open_in_browser(filepath: str) -> None:
+    """
+    Open HTML file in browser, with WSL2 support.
+
+    Args:
+        filepath: Path to the HTML file
+    """
+    abs_path = str(Path(filepath).absolute())
+
+    if is_wsl():
+        # WSL environment - use Windows browser
+        open_browser_wsl(abs_path)
+    else:
+        # Normal Linux/Mac/Windows
+        webbrowser.open('file://' + abs_path)
 
 
 class StrategyVisualizer:
@@ -518,7 +582,7 @@ class StrategyVisualizer:
                 f.write(dashboard_html)
 
             if auto_open:
-                webbrowser.open('file://' + str(Path(output_path).absolute()))
+                open_in_browser(output_path)
 
             return output_path
 
