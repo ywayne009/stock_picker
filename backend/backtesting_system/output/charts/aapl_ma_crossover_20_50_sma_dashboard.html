@@ -1,0 +1,149 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AAPL - MA Crossover 20/50 SMA Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #0E1117;
+            color: #FAFAFA;
+        }
+        .header {
+            text-align: center;
+            padding: 20px;
+            background-color: #1E2530;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .tabs {
+            overflow: hidden;
+            background-color: #1E2530;
+            border-radius: 10px 10px 0 0;
+        }
+        .tab {
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+            background-color: #1E2530;
+            color: #FAFAFA;
+            font-size: 17px;
+        }
+        .tab:hover {
+            background-color: #2A3441;
+        }
+        .tab.active {
+            background-color: #0E1117;
+        }
+        .tabcontent {
+            display: none;
+            padding: 20px;
+            border: 1px solid #1E2530;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+        }
+        iframe {
+            width: 100%;
+            height: 800px;
+            border: none;
+        }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .metric-card {
+            background-color: #1E2530;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .metric-label {
+            font-size: 14px;
+            color: #888;
+        }
+        .positive { color: #26A69A; }
+        .negative { color: #EF5350; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AAPL - MA Crossover 20/50 SMA - Performance Dashboard</h1>
+    </div>
+
+    <div class="summary">
+        <div class="metric-card">
+            <div class="metric-label">Total Return</div>
+            <div class="metric-value positive">
+                1.35%
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Win Rate</div>
+            <div class="metric-value">42.9%</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Sharpe Ratio</div>
+            <div class="metric-value">-0.83</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Max Drawdown</div>
+            <div class="metric-value negative">3.42%</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Total Trades</div>
+            <div class="metric-value">7</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Profit Factor</div>
+            <div class="metric-value">1.45</div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="openTab(event, 'price')">Price & Signals</button>
+        <button class="tab" onclick="openTab(event, 'equity')">Equity Curve</button>
+        <button class="tab" onclick="openTab(event, 'metrics')">Detailed Metrics</button>
+    </div>
+
+    <div id="price" class="tabcontent" style="display: block;">
+        <iframe src="aapl_ma_crossover_20_50_sma_dashboard_price.html"></iframe>
+    </div>
+
+    <div id="equity" class="tabcontent">
+        <iframe src="aapl_ma_crossover_20_50_sma_dashboard_equity.html"></iframe>
+    </div>
+
+    <div id="metrics" class="tabcontent">
+        <iframe src="aapl_ma_crossover_20_50_sma_dashboard_metrics.html"></iframe>
+    </div>
+
+    <script>
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tab");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+    </script>
+</body>
+</html>
+        
