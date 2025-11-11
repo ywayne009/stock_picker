@@ -5,6 +5,9 @@ FastAPI application with REST and WebSocket support
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Import routers
+from app.api.v1.endpoints import data, strategies, backtest
+
 app = FastAPI(
     title="Stock Picking Tool API",
     description="AI-powered stock picking and backtesting platform",
@@ -18,6 +21,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(data.router, prefix="/api/v1/data", tags=["data"])
+app.include_router(strategies.router, prefix="/api/v1/strategies", tags=["strategies"])
+app.include_router(backtest.router, prefix="/api/v1/backtest", tags=["backtest"])
 
 @app.get("/")
 async def root():
