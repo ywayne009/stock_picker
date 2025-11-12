@@ -278,6 +278,61 @@ class CompareStrategiesResponse(BaseModel):
 
 
 # ============================================================================
+# Batch Backtesting (Multi-Stock Multi-Strategy)
+# ============================================================================
+
+class BatchBacktestItem(BaseModel):
+    """Single backtest configuration in a batch"""
+    symbol: str
+    strategy: StrategyConfig
+
+    @validator('symbol')
+    def symbol_must_be_uppercase(cls, v):
+        return v.upper()
+
+
+class BatchBacktestRequest(BaseModel):
+    """Request to run multiple backtests in parallel"""
+    items: List[BatchBacktestItem] = Field(..., description="List of stock-strategy pairs to backtest")
+    start_date: str = Field(..., description="Start date (YYYY-MM-DD)")
+    end_date: str = Field(..., description="End date (YYYY-MM-DD)")
+    initial_capital: float = Field(default=100000.0, description="Starting capital for each backtest")
+    commission: float = Field(default=0.001, description="Commission rate (0.001 = 0.1%)")
+
+    @validator('initial_capital')
+    def capital_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError('Initial capital must be positive')
+        return v
+
+
+class BacktestSummary(BaseModel):
+    """Compact backtest summary for matrix display"""
+    backtest_id: str
+    symbol: str
+    strategy_name: str
+    status: str  # "completed", "running", "failed"
+
+    # Key metrics only (for matrix display)
+    total_return_pct: Optional[float] = None
+    sharpe_ratio: Optional[float] = None
+    max_drawdown_pct: Optional[float] = None
+    total_trades: Optional[int] = None
+    win_rate: Optional[float] = None
+
+    # Error info
+    error_message: Optional[str] = None
+
+
+class BatchBacktestResponse(BaseModel):
+    """Response for batch backtest request"""
+    batch_id: str
+    total_items: int
+    summaries: List[BacktestSummary]
+    created_at: str
+
+
+# ============================================================================
 # Chart Data
 # ============================================================================
 

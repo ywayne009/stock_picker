@@ -20,6 +20,10 @@ def sma(data: pd.Series, period: int) -> pd.Series:
     Returns:
         Series with SMA values
     """
+    # Ensure we have a Series (handle DataFrame with single column)
+    if isinstance(data, pd.DataFrame):
+        data = data.iloc[:, 0] if len(data.columns) == 1 else data.squeeze()
+
     return data.rolling(window=period, min_periods=period).mean()
 
 
@@ -34,6 +38,10 @@ def ema(data: pd.Series, period: int) -> pd.Series:
     Returns:
         Series with EMA values
     """
+    # Ensure we have a Series (handle DataFrame with single column)
+    if isinstance(data, pd.DataFrame):
+        data = data.iloc[:, 0] if len(data.columns) == 1 else data.squeeze()
+
     return data.ewm(span=period, adjust=False, min_periods=period).mean()
 
 

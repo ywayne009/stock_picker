@@ -22,7 +22,10 @@ from app.api.v1.schemas import (
     Trade,
     TradeSignal,
     EquityPoint,
-    SignalType
+    SignalType,
+    BatchBacktestRequest,
+    BatchBacktestResponse,
+    BacktestSummary
 )
 from app.services.backtesting.engine import BacktestEngine
 from app.services.strategy.examples.ma_crossover import MovingAverageCrossover
@@ -448,3 +451,192 @@ async def list_all_backtests():
         })
 
     return {'backtests': backtests, 'total': len(backtests)}
+
+
+@router.post("/batch", response_model=BatchBacktestResponse)
+async def run_batch_backtest(request: BatchBacktestRequest):
+    """
+    Run multiple backtests in parallel for comparison matrix.
+
+    This endpoint runs backtests for multiple stock-strategy combinations
+    and returns compact summaries for display in the comparison matrix.
+
+    Example request:
+    {
+        "items": [
+            {"symbol": "AAPL", "strategy": {...}},
+            {"symbol": "MSFT", "strategy": {...}}
+        ],
+        "start_date": "2023-01-01",
+        "end_date": "2024-01-01",
+        "initial_capital": 100000,
+        "commission": 0.001
+    }
+    """
+    import concurrent.futures
+
+    batch_id = str(uuid.uuid4())
+    summaries = []
+
+    def run_single_backtest(item):
+        """Run a single backtest and return summary"""
+        backtest_id = str(uuid.uuid4())
+
+        try:
+            print(f"Running backtest for {item.symbol} with strategy {item.strategy.name}")
+
+            # Fetch data
+            data = fetch_stock_data(
+                symbol=item.symbol,
+                start_date=request.start_date,
+                end_date=request.end_date,
+                interval='1d'
+            )
+            first_close = float(data['close'].iloc[0])
+            last_close = float(data['close'].iloc[-1])
+            print(f"Fetched {len(data)} bars for {item.symbol}, first close={first_close:.2f}, last close={last_close:.2f}")
+
+            # Create strategy instance
+            strategy = _create_strategy_instance(item.strategy.dict())
+
+            # Create backtest engine
+            engine = BacktestEngine(
+                initial_capital=request.initial_capital,
+                commission=request.commission,
+                slippage=0.0005
+            )
+
+            # Run backtest (make a copy to avoid data mutation issues)
+            result = engine.run_backtest(
+                strategy=strategy,
+                data=data.copy(),
+                ticker=item.symbol
+            )
+
+            # Convert metrics
+            metrics = _convert_metrics_to_schema(result.metrics)
+            signals = _extract_signals(result.signals)
+            trades = _extract_trades(result.trades)
+            equity_curve = _extract_equity_curve(result.portfolio_history)
+            final_value = float(result.portfolio_history['portfolio_value'].iloc[-1])
+
+            # Store full result
+            backtest_result = BacktestResults(
+                backtest_id=backtest_id,
+                symbol=item.symbol,
+                strategy=item.strategy,
+                start_date=request.start_date,
+                end_date=request.end_date,
+                initial_capital=request.initial_capital,
+                final_value=final_value,
+                metrics=metrics,
+                signals=signals,
+                trades=trades,
+                equity_curve=equity_curve,
+                created_at=datetime.now().isoformat(),
+                status='completed',
+                error_message=None
+            )
+
+            _backtest_results[backtest_id] = {
+                'status': 'completed',
+                'progress': 1.0,
+                'created_at': datetime.now().isoformat(),
+                'result': backtest_result,
+                'error': None
+            }
+
+            # Return compact summary
+            summary = BacktestSummary(
+                backtest_id=backtest_id,
+                symbol=item.symbol,
+                strategy_name=item.strategy.name,
+                status='completed',
+                total_return_pct=metrics.total_return_pct,
+                sharpe_ratio=metrics.sharpe_ratio,
+                max_drawdown_pct=metrics.max_drawdown_pct,
+                total_trades=metrics.total_trades,
+                win_rate=metrics.win_rate,
+                error_message=None
+            )
+            print(f"Completed {item.symbol} - {item.strategy.name}: return={metrics.total_return_pct:.2f}%, sharpe={metrics.sharpe_ratio:.2f}")
+            return summary
+
+        except Exception as e:
+            error_msg = f"{str(e)}"
+            print(f"Batch backtest failed for {item.symbol} - {item.strategy.name}: {error_msg}")
+
+            return BacktestSummary(
+                backtest_id=backtest_id,
+                symbol=item.symbol,
+                strategy_name=item.strategy.name,
+                status='failed',
+                total_return_pct=None,
+                sharpe_ratio=None,
+                max_drawdown_pct=None,
+                total_trades=None,
+                win_rate=None,
+                error_message=error_msg
+            )
+
+    # Run backtests sequentially to avoid yfinance thread-safety issues
+    # Note: ThreadPoolExecutor causes yfinance to return same data for all symbols
+    summaries = [run_single_backtest(item) for item in request.items]
+
+    return BatchBacktestResponse(
+        batch_id=batch_id,
+        total_items=len(request.items),
+        summaries=summaries,
+        created_at=datetime.now().isoformat()
+    )
+
+
+@router.get("/{backtest_id}/summary", response_model=BacktestSummary)
+async def get_backtest_summary(backtest_id: str):
+    """
+    Get a compact summary of a backtest (for matrix display).
+
+    Returns only the key metrics needed for the comparison matrix,
+    much faster than fetching full results.
+    """
+    if backtest_id not in _backtest_results:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Backtest '{backtest_id}' not found"
+        )
+
+    result = _backtest_results[backtest_id]
+
+    if result['status'] == 'failed':
+        return BacktestSummary(
+            backtest_id=backtest_id,
+            symbol=result.get('symbol', 'UNKNOWN'),
+            strategy_name=result.get('strategy_name', 'UNKNOWN'),
+            status='failed',
+            error_message=result.get('error', 'Unknown error')
+        )
+
+    if result['status'] != 'completed':
+        return BacktestSummary(
+            backtest_id=backtest_id,
+            symbol=result['result'].symbol if result.get('result') else 'UNKNOWN',
+            strategy_name=result['result'].strategy.name if result.get('result') else 'UNKNOWN',
+            status=result['status'],
+        )
+
+    # Extract key metrics from full result
+    full_result = result['result']
+    metrics = full_result.metrics
+
+    return BacktestSummary(
+        backtest_id=backtest_id,
+        symbol=full_result.symbol,
+        strategy_name=full_result.strategy.name,
+        status='completed',
+        total_return_pct=metrics.total_return_pct,
+        sharpe_ratio=metrics.sharpe_ratio,
+        max_drawdown_pct=metrics.max_drawdown_pct,
+        total_trades=metrics.total_trades,
+        win_rate=metrics.win_rate,
+        error_message=None
+    )

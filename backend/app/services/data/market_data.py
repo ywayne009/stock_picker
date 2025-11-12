@@ -45,20 +45,20 @@ def fetch_stock_data(
         # Create ticker object
         ticker = yf.Ticker(symbol)
 
-        # Fetch historical data using download for better reliability
-        data = yf.download(
-            symbol,
+        # Use Ticker.history() instead of yf.download() to avoid caching issues
+        # This is more reliable when fetching data for multiple symbols sequentially
+        data = ticker.history(
             start=start_date,
             end=end_date,
             interval=interval,
-            progress=False,
             auto_adjust=True  # Adjust for splits and dividends
         )
 
         if data.empty:
             raise ValueError(f"No data found for symbol '{symbol}' in the specified date range")
 
-        # Handle MultiIndex columns (yfinance 0.2.66+ returns MultiIndex for single symbols)
+        # Ticker.history() doesn't return MultiIndex for single symbols,
+        # but handle it just in case
         if isinstance(data.columns, pd.MultiIndex):
             # Flatten MultiIndex by taking the first level
             data.columns = data.columns.get_level_values(0)

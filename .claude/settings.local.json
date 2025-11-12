@@ -26,7 +26,8 @@
       "Bash(echo:*)",
       "mcp__puppeteer-mcp-claude__puppeteer_new_page",
       "mcp__puppeteer-mcp-claude__puppeteer_navigate",
-      "mcp__puppeteer-mcp-claude__puppeteer_evaluate"
+      "mcp__puppeteer-mcp-claude__puppeteer_evaluate",
+      "Bash(open http://localhost:5173)"
     ],
     "deny": [],
     "ask": []
