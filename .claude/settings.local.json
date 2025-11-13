@@ -27,7 +27,9 @@
       "mcp__puppeteer-mcp-claude__puppeteer_new_page",
       "mcp__puppeteer-mcp-claude__puppeteer_navigate",
       "mcp__puppeteer-mcp-claude__puppeteer_evaluate",
-      "Bash(open http://localhost:5173)"
+      "Bash(open http://localhost:5173)",
+      "Bash(uvicorn app.main:app:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
