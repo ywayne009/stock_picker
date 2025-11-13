@@ -204,6 +204,9 @@ class PerformanceMetrics(BaseModel):
 
     # Other
     expectancy: float
+
+    # Buy and hold comparison
+    buy_hold_return: Optional[float] = None
     risk_free_rate: float = 0.02
 
 

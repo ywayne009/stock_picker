@@ -294,9 +294,9 @@ class BacktestEngine:
                     'entry_price': entry_price,
                     'exit_price': exit_price,
                     'shares': entry_shares,
-                    'profit': profit,
-                    'profit_pct': profit_pct,
-                    'duration': duration,
+                    'profit_loss': profit,
+                    'profit_loss_pct': profit_pct,
+                    'duration_days': duration,
                     'entry_value': entry_value,
                     'exit_value': exit_value
                 })

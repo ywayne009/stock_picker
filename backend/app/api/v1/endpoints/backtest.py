@@ -78,18 +78,17 @@ def _convert_metrics_to_schema(metrics) -> PerformanceMetrics:
             return default
         return float(value)
 
-    # Calculate total_return_pct and max_drawdown_pct
-    total_return_pct = metrics.total_return * 100
-    max_drawdown_pct = metrics.max_drawdown * 100
+    # Calculate total_return in dollars and percentage
+    total_return_dollars = metrics.final_portfolio_value - metrics.initial_portfolio_value
 
     return PerformanceMetrics(
-        total_return=safe_float(metrics.total_return),
-        total_return_pct=safe_float(total_return_pct),
+        total_return=safe_float(total_return_dollars),
+        total_return_pct=safe_float(metrics.total_return),  # Decimal: 0.0235 = 2.35%
         cagr=safe_float(metrics.cagr),
         sharpe_ratio=safe_float(metrics.sharpe_ratio),
         sortino_ratio=safe_float(metrics.sortino_ratio),
         max_drawdown=safe_float(metrics.max_drawdown),
-        max_drawdown_pct=safe_float(max_drawdown_pct),
+        max_drawdown_pct=safe_float(metrics.max_drawdown),  # Decimal: 0.05 = 5%
         volatility=safe_float(metrics.volatility),
         total_trades=int(metrics.total_trades),
         winning_trades=int(metrics.winning_trades),
@@ -103,6 +102,7 @@ def _convert_metrics_to_schema(metrics) -> PerformanceMetrics:
         largest_loss=safe_float(metrics.largest_loss),
         avg_holding_period=safe_float(metrics.average_trade_duration) if metrics.average_trade_duration else None,
         expectancy=safe_float(metrics.expectancy),
+        buy_hold_return=safe_float(metrics.buy_hold_return),
         risk_free_rate=0.02
     )
 

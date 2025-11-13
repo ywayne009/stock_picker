@@ -111,7 +111,7 @@ export const ComparisonCell: React.FC<ComparisonCellProps> = ({ cell }) => {
           )}
           <span className={`text-lg font-bold ${returnColor}`}>
             {total_return_pct !== undefined
-              ? `${total_return_pct > 0 ? '+' : ''}${total_return_pct.toFixed(2)}%`
+              ? `${total_return_pct > 0 ? '+' : ''}${(total_return_pct * 100).toFixed(2)}%`
               : 'N/A'}
           </span>
         </div>
@@ -127,10 +127,10 @@ export const ComparisonCell: React.FC<ComparisonCellProps> = ({ cell }) => {
         {/* Additional metrics */}
         <div className="flex items-center justify-between text-xs text-dark-muted">
           <span title="Max Drawdown">
-            DD: {max_drawdown_pct !== undefined ? `${max_drawdown_pct.toFixed(1)}%` : 'N/A'}
+            DD: {max_drawdown_pct !== undefined ? `${(max_drawdown_pct * 100).toFixed(1)}%` : 'N/A'}
           </span>
           <span title="Win Rate">
-            WR: {win_rate !== undefined ? `${win_rate.toFixed(0)}%` : 'N/A'}
+            WR: {win_rate !== undefined ? `${(win_rate * 100).toFixed(0)}%` : 'N/A'}
           </span>
         </div>
 

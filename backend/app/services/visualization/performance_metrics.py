@@ -53,6 +53,9 @@ class PerformanceMetrics:
     final_portfolio_value: float
     initial_portfolio_value: float
 
+    # Buy and hold comparison
+    buy_hold_return: float  # Buy and hold return percentage
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert metrics to dictionary."""
         return {
@@ -79,7 +82,8 @@ class PerformanceMetrics:
             'min_trade_duration_days': self.min_trade_duration,
             'expectancy': self.expectancy,
             'final_portfolio_value': self.final_portfolio_value,
-            'initial_portfolio_value': self.initial_portfolio_value
+            'initial_portfolio_value': self.initial_portfolio_value,
+            'buy_hold_return_pct': self.buy_hold_return * 100
         }
 
 
@@ -163,6 +167,9 @@ def calculate_metrics(
     # Expectancy (average profit/loss per trade)
     expectancy = (win_rate * average_win) + ((1 - win_rate) * average_loss)
 
+    # Buy and hold return
+    buy_hold_return = _calculate_buy_hold_return(signals_df, initial_capital, commission)
+
     return PerformanceMetrics(
         total_return=total_return,
         cagr=cagr,
@@ -187,7 +194,8 @@ def calculate_metrics(
         min_trade_duration=min_duration,
         expectancy=expectancy,
         final_portfolio_value=final_value,
-        initial_portfolio_value=initial_capital
+        initial_portfolio_value=initial_capital,
+        buy_hold_return=buy_hold_return
     )
 
 
@@ -347,3 +355,49 @@ def _calculate_drawdown_metrics(portfolio_values: pd.Series) -> Dict[str, float]
         'average_drawdown': abs(average_drawdown),
         'max_drawdown_duration': max_dd_duration
     }
+
+
+def _calculate_buy_hold_return(
+    signals_df: pd.DataFrame,
+    initial_capital: float,
+    commission: float
+) -> float:
+    """
+    Calculate buy and hold return with same position sizing as strategy.
+
+    Uses 10% of capital (matching the strategy's position sizing) to buy
+    at the first price, holds until the last price, then calculates
+    the return on the total portfolio (invested + cash).
+
+    Returns:
+        Buy and hold return as decimal (e.g., 0.0235 for 2.35%)
+    """
+    if len(signals_df) < 2:
+        return 0.0
+
+    first_price = signals_df['close'].iloc[0]
+    last_price = signals_df['close'].iloc[-1]
+
+    # Use same position sizing as strategy (10% of capital)
+    position_size_pct = 0.1
+    investment_amount = initial_capital * position_size_pct
+
+    # Buy at first price with commission
+    buy_commission = investment_amount * commission
+    shares_bought = (investment_amount - buy_commission) / first_price
+
+    # Cash remaining (90% of capital not invested)
+    cash = initial_capital - investment_amount
+
+    # Sell at last price with commission
+    proceeds = shares_bought * last_price
+    sell_commission = proceeds * commission
+    final_invested_value = proceeds - sell_commission
+
+    # Total portfolio value at end = cash + invested value
+    final_portfolio_value = cash + final_invested_value
+
+    # Calculate return on total portfolio
+    buy_hold_return = (final_portfolio_value - initial_capital) / initial_capital
+
+    return buy_hold_return

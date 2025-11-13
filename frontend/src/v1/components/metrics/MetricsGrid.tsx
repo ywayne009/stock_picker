@@ -36,16 +36,16 @@ const MetricCard: React.FC<MetricCardProps> = ({ label, value, icon, trend = 'ne
   };
 
   return (
-    <div className="bg-dark-bg rounded-lg border border-dark-border p-4">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-dark-muted">{label}</span>
-        <div className={`${getTrendColor()}`}>{icon}</div>
+    <div className="bg-dark-bg rounded-lg border border-dark-border p-2.5">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs text-dark-muted">{label}</span>
+        <div className={`${getTrendColor()}`}>{React.cloneElement(icon as React.ReactElement, { className: 'w-3.5 h-3.5' })}</div>
       </div>
       <div className="flex items-baseline gap-1">
-        <span className={`text-2xl font-bold ${getTrendColor()}`}>
+        <span className={`text-lg font-bold ${getTrendColor()}`}>
           {value}
         </span>
-        {suffix && <span className="text-sm text-dark-muted">{suffix}</span>}
+        {suffix && <span className="text-xs text-dark-muted">{suffix}</span>}
       </div>
     </div>
   );
@@ -76,13 +76,13 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
   };
 
   return (
-    <div className="bg-dark-card rounded-lg border border-dark-border p-6">
-      <div className="flex items-center gap-2 mb-6">
-        <BarChart3 className="w-5 h-5 text-primary" />
-        <h2 className="text-xl font-semibold text-dark-text">Performance Metrics</h2>
+    <div className="bg-dark-card rounded-lg border border-dark-border p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <BarChart3 className="w-4 h-4 text-primary" />
+        <h2 className="text-lg font-semibold text-dark-text">Performance Metrics</h2>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5">
         {/* Returns */}
         <MetricCard
           label="Total Return"
@@ -202,6 +202,27 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           icon={<Target className="w-5 h-5" />}
           trend="neutral"
         />
+
+        {/* Buy and Hold Comparison */}
+        {metrics.buy_hold_return !== undefined && (
+          <MetricCard
+            label="Buy & Hold Return"
+            value={formatPercent(metrics.buy_hold_return)}
+            icon={<TrendingUp className="w-5 h-5" />}
+            trend={getTrend(metrics.buy_hold_return)}
+            suffix="%"
+          />
+        )}
+
+        {metrics.buy_hold_return !== undefined && (
+          <MetricCard
+            label="Outperformance"
+            value={formatPercent(metrics.total_return_pct - metrics.buy_hold_return)}
+            icon={<Award className="w-5 h-5" />}
+            trend={getTrend(metrics.total_return_pct - metrics.buy_hold_return)}
+            suffix="%"
+          />
+        )}
       </div>
     </div>
   );

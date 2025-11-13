@@ -11,7 +11,7 @@ import type {
   StrategyInfo,
 } from '../types/comparison';
 import type { BacktestResults } from '../types';
-import apiClient from '../api/client';
+import apiClient, { backtestAPI } from '../api/client';
 
 interface ComparisonStore extends ComparisonMatrix {
   // Actions
@@ -33,7 +33,9 @@ interface ComparisonStore extends ComparisonMatrix {
 
   // Selected cell for detailed view
   selectedCell: MatrixCell | null;
-  selectCell: (symbol: string, strategyName: string) => void;
+  selectedCellFullResults: BacktestResults | null;
+  selectedCellLoading: boolean;
+  selectCell: (symbol: string, strategyName: string) => Promise<void>;
   clearSelection: () => void;
 
   // Tuning cell for parameter adjustment
@@ -67,6 +69,8 @@ export const useComparisonStore = create<ComparisonStore>((set, get) => ({
   commission: 0.001,
   availableStrategies: [],
   selectedCell: null,
+  selectedCellFullResults: null,
+  selectedCellLoading: false,
   tuningCell: null,
 
   // Load available strategies from API
@@ -197,8 +201,8 @@ export const useComparisonStore = create<ComparisonStore>((set, get) => ({
         commission,
       };
 
-      const response = await apiClient.post('/backtest/batch', request);
-      const summary = response.data.summaries[0];
+      const response = await backtestAPI.runBatchBacktest(request);
+      const summary = response.summaries[0];
 
       // Update cell with results
       const updatedCells = new Map(get().cells);
@@ -252,8 +256,8 @@ export const useComparisonStore = create<ComparisonStore>((set, get) => ({
         commission,
       };
 
-      const response = await apiClient.post('/backtest/batch', request);
-      const summaries: BacktestSummary[] = response.data.summaries;
+      const response = await backtestAPI.runBatchBacktest(request);
+      const summaries: BacktestSummary[] = response.summaries;
 
       // Update all cells with results
       const updatedCells = new Map(get().cells);
@@ -317,15 +321,27 @@ export const useComparisonStore = create<ComparisonStore>((set, get) => ({
   },
 
   // Selection for detailed view
-  selectCell: (symbol: string, strategyName: string) => {
+  selectCell: async (symbol: string, strategyName: string) => {
     const cell = get().getCell(symbol, strategyName);
-    if (cell && cell.summary?.status === 'completed') {
-      set({ selectedCell: cell });
+    if (!cell || cell.summary?.status !== 'completed') return;
+
+    // Set selected cell and start loading
+    set({ selectedCell: cell, selectedCellLoading: true, selectedCellFullResults: null });
+
+    try {
+      // Fetch full backtest results
+      const backtestId = cell.summary.backtest_id;
+      const fullResults = await backtestAPI.getResults(backtestId);
+
+      set({ selectedCellFullResults: fullResults, selectedCellLoading: false });
+    } catch (error: any) {
+      console.error('Failed to fetch full results:', error);
+      set({ selectedCellLoading: false });
     }
   },
 
   clearSelection: () => {
-    set({ selectedCell: null });
+    set({ selectedCell: null, selectedCellFullResults: null, selectedCellLoading: false });
   },
 
   // Tuning for parameter adjustment
@@ -364,8 +380,8 @@ export const useComparisonStore = create<ComparisonStore>((set, get) => ({
         commission,
       };
 
-      const response = await apiClient.post('/backtest/batch', request);
-      const summary = response.data.summaries[0];
+      const response = await backtestAPI.runBatchBacktest(request);
+      const summary = response.summaries[0];
 
       // Update cell with results
       const updatedCells = new Map(get().cells);

@@ -3,17 +3,70 @@ import { createChart, ColorType } from 'lightweight-charts';
 import type { OHLCVData, TradeSignal } from '../../types';
 import { TrendingUp } from 'lucide-react';
 
+interface MovingAverage {
+  period: number;
+  type: 'SMA' | 'EMA';
+  color: string;
+}
+
 interface PriceChartProps {
   data: OHLCVData[];
   signals?: TradeSignal[];
   symbol: string;
+  movingAverages?: MovingAverage[];
 }
 
-export const PriceChart: React.FC<PriceChartProps> = ({ data, signals = [], symbol }) => {
+// Calculate Simple Moving Average
+function calculateSMA(data: OHLCVData[], period: number) {
+  const result = [];
+  for (let i = period - 1; i < data.length; i++) {
+    const sum = data.slice(i - period + 1, i + 1).reduce((acc, d) => acc + d.close, 0);
+    const avg = sum / period;
+    result.push({
+      time: new Date(data[i].date).getTime() / 1000,
+      value: avg,
+    });
+  }
+  return result;
+}
+
+// Calculate Exponential Moving Average
+function calculateEMA(data: OHLCVData[], period: number) {
+  const multiplier = 2 / (period + 1);
+  const result = [];
+
+  // Start with SMA for first value
+  const firstSum = data.slice(0, period).reduce((acc, d) => acc + d.close, 0);
+  let ema = firstSum / period;
+
+  result.push({
+    time: new Date(data[period - 1].date).getTime() / 1000,
+    value: ema,
+  });
+
+  // Calculate EMA for remaining values
+  for (let i = period; i < data.length; i++) {
+    ema = (data[i].close - ema) * multiplier + ema;
+    result.push({
+      time: new Date(data[i].date).getTime() / 1000,
+      value: ema,
+    });
+  }
+
+  return result;
+}
+
+// Helper function to calculate MA based on type
+function calculateMA(data: OHLCVData[], period: number, type: 'SMA' | 'EMA') {
+  return type === 'SMA' ? calculateSMA(data, period) : calculateEMA(data, period);
+}
+
+export const PriceChart: React.FC<PriceChartProps> = ({ data, signals = [], symbol, movingAverages = [] }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const candlestickSeriesRef = useRef<any>(null);
   const volumeSeriesRef = useRef<any>(null);
+  const maSeriesRefs = useRef<any[]>([]);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -106,6 +159,30 @@ export const PriceChart: React.FC<PriceChartProps> = ({ data, signals = [], symb
       candlestickSeriesRef.current.setData(candleData);
       volumeSeriesRef.current.setData(volumeData);
 
+      // Remove old MA series
+      maSeriesRefs.current.forEach((series) => {
+        try {
+          chartRef.current?.removeSeries(series);
+        } catch (e) {
+          // Ignore if already removed
+        }
+      });
+      maSeriesRefs.current = [];
+
+      // Add moving average lines
+      if (movingAverages.length > 0 && chartRef.current) {
+        movingAverages.forEach((ma) => {
+          const maData = calculateMA(data, ma.period, ma.type);
+          const lineSeries = chartRef.current.addLineSeries({
+            color: ma.color,
+            lineWidth: 2,
+            title: `${ma.type} ${ma.period}`,
+          });
+          lineSeries.setData(maData);
+          maSeriesRefs.current.push(lineSeries);
+        });
+      }
+
       // Add markers for buy/sell signals
       if (signals.length > 0 && candlestickSeriesRef.current) {
         const markers = signals
@@ -126,30 +203,30 @@ export const PriceChart: React.FC<PriceChartProps> = ({ data, signals = [], symb
     } catch (error) {
       console.error('Error updating price chart:', error);
     }
-  }, [data, signals]);
+  }, [data, signals, movingAverages]);
 
   if (!data || data.length === 0) {
     return (
-      <div className="bg-dark-card rounded-lg border border-dark-border p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="w-5 h-5 text-primary" />
-          <h2 className="text-xl font-semibold text-dark-text">Price Chart</h2>
+      <div className="bg-dark-card rounded-lg border border-dark-border p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <TrendingUp className="w-4 h-4 text-primary" />
+          <h3 className="text-lg font-semibold text-dark-text">Price Chart</h3>
         </div>
         <div className="h-[400px] flex items-center justify-center text-dark-muted">
-          No data to display. Run a backtest to see the chart.
+          No data to display
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-dark-card rounded-lg border border-dark-border p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-dark-card rounded-lg border border-dark-border p-4">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-primary" />
-          <h2 className="text-xl font-semibold text-dark-text">Price Chart - {symbol}</h2>
+          <TrendingUp className="w-4 h-4 text-primary" />
+          <h3 className="text-lg font-semibold text-dark-text">Price Chart - {symbol}</h3>
         </div>
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-success rounded"></div>
             <span className="text-dark-muted">Buy Signal</span>

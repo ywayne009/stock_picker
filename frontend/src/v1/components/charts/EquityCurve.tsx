@@ -4,15 +4,14 @@ import type { EquityPoint } from '../../types';
 import { LineChart } from 'lucide-react';
 
 interface EquityCurveProps {
-  data: EquityPoint[];
+  equityCurve: Array<{ date: string; portfolio_value: number }>;
   initialCapital: number;
 }
 
-export const EquityCurve: React.FC<EquityCurveProps> = ({ data, initialCapital }) => {
+export const EquityCurve: React.FC<EquityCurveProps> = ({ equityCurve, initialCapital }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const equitySeriesRef = useRef<any>(null);
-  const drawdownSeriesRef = useRef<any>(null);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -28,7 +27,7 @@ export const EquityCurve: React.FC<EquityCurveProps> = ({ data, initialCapital }
         horzLines: { color: '#334155' },
       },
       width: chartContainerRef.current.clientWidth,
-      height: 400,
+      height: 300,
       rightPriceScale: {
         borderColor: '#334155',
       },
@@ -53,15 +52,6 @@ export const EquityCurve: React.FC<EquityCurveProps> = ({ data, initialCapital }
 
     equitySeriesRef.current = equitySeries;
 
-    // Add drawdown line (on separate scale)
-    const drawdownSeries = chart.addLineSeries({
-      color: '#ef4444',
-      lineWidth: 2,
-      priceScaleId: 'right',
-    });
-
-    drawdownSeriesRef.current = drawdownSeries;
-
     // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current) {
@@ -80,70 +70,51 @@ export const EquityCurve: React.FC<EquityCurveProps> = ({ data, initialCapital }
   }, []);
 
   useEffect(() => {
-    if (!equitySeriesRef.current || !drawdownSeriesRef.current || !data.length) return;
+    if (!equitySeriesRef.current || !equityCurve.length) return;
 
     try {
       // Convert equity data to chart format
-      const equityData = data.map((d) => ({
+      const equityData = equityCurve.map((d) => ({
         time: new Date(d.date).getTime() / 1000,
         value: d.portfolio_value,
       }));
 
-      const drawdownData = data.map((d) => ({
-        time: new Date(d.date).getTime() / 1000,
-        value: d.drawdown_pct,
-      }));
-
       equitySeriesRef.current.setData(equityData);
-      drawdownSeriesRef.current.setData(drawdownData);
 
       // Fit content
       chartRef.current?.timeScale().fitContent();
     } catch (error) {
       console.error('Error updating equity curve:', error);
     }
-  }, [data]);
+  }, [equityCurve]);
 
-  if (!data || data.length === 0) {
+  if (!equityCurve || equityCurve.length === 0) {
     return (
-      <div className="bg-dark-card rounded-lg border border-dark-border p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <LineChart className="w-5 h-5 text-primary" />
-          <h2 className="text-xl font-semibold text-dark-text">Equity Curve</h2>
+      <div className="bg-dark-card rounded-lg border border-dark-border p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <LineChart className="w-4 h-4 text-primary" />
+          <h3 className="text-lg font-semibold text-dark-text">Equity Curve</h3>
         </div>
-        <div className="h-[400px] flex items-center justify-center text-dark-muted">
-          No data to display. Run a backtest to see the equity curve.
+        <div className="h-[300px] flex items-center justify-center text-dark-muted">
+          No data to display
         </div>
       </div>
     );
   }
 
   // Calculate summary statistics
-  const finalValue = data[data.length - 1].portfolio_value;
+  const finalValue = equityCurve[equityCurve.length - 1].portfolio_value;
   const totalReturn = finalValue - initialCapital;
   const totalReturnPct = ((finalValue - initialCapital) / initialCapital) * 100;
-  const maxDrawdown = Math.min(...data.map((d) => d.drawdown_pct));
 
   return (
-    <div className="bg-dark-card rounded-lg border border-dark-border p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-dark-card rounded-lg border border-dark-border p-4">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <LineChart className="w-5 h-5 text-primary" />
-          <h2 className="text-xl font-semibold text-dark-text">Equity Curve</h2>
+          <LineChart className="w-4 h-4 text-primary" />
+          <h3 className="text-lg font-semibold text-dark-text">Portfolio Value</h3>
         </div>
-        <div className="flex items-center gap-6 text-sm">
-          <div className="text-right">
-            <div className="text-dark-muted">Initial Capital</div>
-            <div className="text-dark-text font-semibold">
-              ${initialCapital.toLocaleString()}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-dark-muted">Final Value</div>
-            <div className={`font-semibold ${totalReturn >= 0 ? 'text-success' : 'text-danger'}`}>
-              ${finalValue.toLocaleString()}
-            </div>
-          </div>
+        <div className="flex items-center gap-4 text-xs">
           <div className="text-right">
             <div className="text-dark-muted">Return</div>
             <div className={`font-semibold ${totalReturn >= 0 ? 'text-success' : 'text-danger'}`}>
@@ -151,23 +122,9 @@ export const EquityCurve: React.FC<EquityCurveProps> = ({ data, initialCapital }
               {totalReturnPct.toFixed(2)}%
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-dark-muted">Max Drawdown</div>
-            <div className="text-danger font-semibold">{maxDrawdown.toFixed(2)}%</div>
-          </div>
         </div>
       </div>
       <div ref={chartContainerRef} />
-      <div className="flex items-center gap-4 mt-4 text-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-primary rounded"></div>
-          <span className="text-dark-muted">Portfolio Value</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-danger rounded"></div>
-          <span className="text-dark-muted">Drawdown %</span>
-        </div>
-      </div>
     </div>
   );
 };

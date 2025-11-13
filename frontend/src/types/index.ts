@@ -69,6 +69,7 @@ export interface PerformanceMetrics {
   largest_loss: number;
   avg_holding_period?: number;
   expectancy: number;
+  buy_hold_return?: number;
   risk_free_rate: number;
 }
 

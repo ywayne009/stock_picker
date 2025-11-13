@@ -10,6 +10,11 @@ import type {
   PerformanceMetrics,
   Trade,
 } from '../types';
+import type {
+  BatchBacktestRequest,
+  BatchBacktestResponse,
+  BacktestSummary,
+} from '../types/comparison';
 
 const API_BASE_URL = 'http://localhost:8000/api/v1';
 
@@ -108,6 +113,17 @@ export const backtestAPI = {
 
   listBacktests: async (): Promise<any> => {
     const response = await apiClient.get('/backtest/list/all');
+    return response.data;
+  },
+
+  // Batch backtest for V2 dashboard
+  runBatchBacktest: async (request: BatchBacktestRequest): Promise<BatchBacktestResponse> => {
+    const response = await apiClient.post('/backtest/batch', request);
+    return response.data;
+  },
+
+  getSummary: async (backtestId: string): Promise<BacktestSummary> => {
+    const response = await apiClient.get(`/backtest/${backtestId}/summary`);
     return response.data;
   },
 };
