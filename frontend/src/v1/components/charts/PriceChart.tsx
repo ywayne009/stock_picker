@@ -61,7 +61,7 @@ function calculateMA(data: OHLCVData[], period: number, type: 'SMA' | 'EMA') {
   return type === 'SMA' ? calculateSMA(data, period) : calculateEMA(data, period);
 }
 
-export const PriceChart: React.FC<PriceChartProps> = ({ data, signals = [], symbol, movingAverages = [] }) => {
+const PriceChartComponent: React.FC<PriceChartProps> = ({ data, signals = [], symbol, movingAverages = [] }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const candlestickSeriesRef = useRef<any>(null);
@@ -241,3 +241,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({ data, signals = [], symb
     </div>
   );
 };
+
+// Memoize to prevent unnecessary re-renders when data hasn't changed
+export const PriceChart = React.memo(PriceChartComponent);

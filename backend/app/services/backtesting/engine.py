@@ -252,6 +252,23 @@ class BacktestEngine:
             cash_values.append(cash)
             shares_values.append(shares)
 
+        # CRITICAL FIX: Force-liquidate any open position at end of period
+        # This ensures Total Return matches completed trades count
+        # If position is still open (no SELL signal was generated), close it at market price
+        if shares > 0:
+            final_price = df.iloc[-1]['close']
+            execution_price = final_price * (1 - self.slippage)  # Apply slippage
+            proceeds = shares * execution_price
+            commission_cost = proceeds * self.commission
+            cash += proceeds - commission_cost
+            shares = 0
+
+            # Update the final portfolio value to reflect forced liquidation
+            portfolio_values[-1] = cash
+            positions[-1] = 0
+            cash_values[-1] = cash
+            shares_values[-1] = shares
+
         df['portfolio_value'] = portfolio_values
         df['position'] = positions
         df['cash'] = cash_values

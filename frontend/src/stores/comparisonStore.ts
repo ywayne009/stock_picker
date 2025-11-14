@@ -43,6 +43,25 @@ interface ComparisonStore extends ComparisonMatrix {
   openTuning: (symbol: string, strategyName: string) => void;
   closeTuning: () => void;
   updateCellParameters: (symbol: string, strategyName: string, parameters: Record<string, any>) => Promise<void>;
+
+  // Batch progress tracking
+  batchProgress: {
+    isRunning: boolean;
+    completed: number;
+    total: number;
+  };
+
+  // Cached backtest results (keyed by backtest_id)
+  cachedResults: Map<string, BacktestResults>;
+
+  // Export functions
+  exportToCSV: () => void;
+
+  // Save/Load configurations
+  saveConfiguration: (name: string) => void;
+  loadConfiguration: (name: string) => void;
+  getSavedConfigurations: () => string[];
+  deleteConfiguration: (name: string) => void;
 }
 
 const getCellKey = (symbol: string, strategyName: string) => `${symbol}-${strategyName}`;
@@ -72,6 +91,12 @@ export const useComparisonStore = create<ComparisonStore>((set, get) => ({
   selectedCellFullResults: null,
   selectedCellLoading: false,
   tuningCell: null,
+  batchProgress: {
+    isRunning: false,
+    completed: 0,
+    total: 0,
+  },
+  cachedResults: new Map(),
 
   // Load available strategies from API
   loadAvailableStrategies: async () => {
@@ -225,9 +250,21 @@ export const useComparisonStore = create<ComparisonStore>((set, get) => ({
     }
   },
 
-  // Run all cells in batch
+  // Run all cells in batch (with progress tracking)
   runAllCells: async () => {
     const { symbols, strategies, cells, startDate, endDate, initialCapital, commission } = get();
+
+    // Calculate total number of backtests
+    const totalBacktests = symbols.length * strategies.length;
+
+    // Initialize progress tracking
+    set({
+      batchProgress: {
+        isRunning: true,
+        completed: 0,
+        total: totalBacktests,
+      }
+    });
 
     // Set all cells to loading
     const loadingCells = new Map(cells);
@@ -243,40 +280,73 @@ export const useComparisonStore = create<ComparisonStore>((set, get) => ({
     set({ cells: loadingCells });
 
     try {
-      // Build batch request
-      const items = symbols.flatMap(symbol =>
-        strategies.map(strategy => ({ symbol, strategy }))
-      );
+      // Run backtests one by one for real-time progress updates
+      let completed = 0;
 
-      const request: BatchBacktestRequest = {
-        items,
-        start_date: startDate,
-        end_date: endDate,
-        initial_capital: initialCapital,
-        commission,
-      };
+      for (const symbol of symbols) {
+        for (const strategy of strategies) {
+          const key = getCellKey(symbol, strategy.name);
+          const cell = get().cells.get(key);
 
-      const response = await backtestAPI.runBatchBacktest(request);
-      const summaries: BacktestSummary[] = response.summaries;
+          if (!cell) continue;
 
-      // Update all cells with results
-      const updatedCells = new Map(get().cells);
-      summaries.forEach(summary => {
-        const key = getCellKey(summary.symbol, summary.strategy_name);
-        const cell = updatedCells.get(key);
-        if (cell) {
-          updatedCells.set(key, {
-            ...cell,
-            summary,
-            isLoading: false,
-            error: summary.status === 'failed' ? summary.error_message : undefined,
+          try {
+            // Run single backtest
+            const request: BatchBacktestRequest = {
+              items: [{ symbol, strategy }],
+              start_date: startDate,
+              end_date: endDate,
+              initial_capital: initialCapital,
+              commission,
+            };
+
+            const response = await backtestAPI.runBatchBacktest(request);
+            const summary = response.summaries[0];
+
+            // Update this cell
+            const updatedCells = new Map(get().cells);
+            updatedCells.set(key, {
+              ...cell,
+              summary,
+              isLoading: false,
+              error: summary.status === 'failed' ? summary.error_message : undefined,
+            });
+            set({ cells: updatedCells });
+
+          } catch (error: any) {
+            // Update this cell with error
+            const updatedCells = new Map(get().cells);
+            updatedCells.set(key, {
+              ...cell,
+              isLoading: false,
+              error: error.message || 'Failed to run backtest',
+            });
+            set({ cells: updatedCells });
+          }
+
+          // Update progress
+          completed++;
+          set({
+            batchProgress: {
+              isRunning: true,
+              completed,
+              total: totalBacktests,
+            }
           });
         }
+      }
+
+      // Complete progress tracking
+      set({
+        batchProgress: {
+          isRunning: false,
+          completed: totalBacktests,
+          total: totalBacktests,
+        }
       });
-      set({ cells: updatedCells });
 
     } catch (error: any) {
-      // Set all cells to error state
+      // Set all cells to error state and stop progress
       const errorCells = new Map(get().cells);
       symbols.forEach(symbol => {
         strategies.forEach(strategy => {
@@ -291,7 +361,14 @@ export const useComparisonStore = create<ComparisonStore>((set, get) => ({
           }
         });
       });
-      set({ cells: errorCells });
+      set({
+        cells: errorCells,
+        batchProgress: {
+          isRunning: false,
+          completed: 0,
+          total: totalBacktests,
+        }
+      });
     }
   },
 
@@ -320,20 +397,40 @@ export const useComparisonStore = create<ComparisonStore>((set, get) => ({
     return cells.get(getCellKey(symbol, strategyName));
   },
 
-  // Selection for detailed view
+  // Selection for detailed view (with caching)
   selectCell: async (symbol: string, strategyName: string) => {
     const cell = get().getCell(symbol, strategyName);
     if (!cell || cell.summary?.status !== 'completed') return;
 
-    // Set selected cell and start loading
+    const backtestId = cell.summary.backtest_id;
+    const cachedResults = get().cachedResults;
+
+    // Check cache first
+    if (cachedResults.has(backtestId)) {
+      const fullResults = cachedResults.get(backtestId)!;
+      set({
+        selectedCell: cell,
+        selectedCellFullResults: fullResults,
+        selectedCellLoading: false
+      });
+      return;
+    }
+
+    // Not in cache, fetch from API
     set({ selectedCell: cell, selectedCellLoading: true, selectedCellFullResults: null });
 
     try {
-      // Fetch full backtest results
-      const backtestId = cell.summary.backtest_id;
       const fullResults = await backtestAPI.getResults(backtestId);
 
-      set({ selectedCellFullResults: fullResults, selectedCellLoading: false });
+      // Store in cache
+      const updatedCache = new Map(cachedResults);
+      updatedCache.set(backtestId, fullResults);
+
+      set({
+        selectedCellFullResults: fullResults,
+        selectedCellLoading: false,
+        cachedResults: updatedCache
+      });
     } catch (error: any) {
       console.error('Failed to fetch full results:', error);
       set({ selectedCellLoading: false });
@@ -404,5 +501,152 @@ export const useComparisonStore = create<ComparisonStore>((set, get) => ({
       });
       set({ cells: updatedCells });
     }
+  },
+
+  // Export matrix to CSV
+  exportToCSV: () => {
+    const { symbols, strategies, cells, startDate, endDate } = get();
+
+    // Build CSV header
+    const headers = [
+      'Symbol',
+      'Strategy',
+      'Total Return %',
+      'Sharpe Ratio',
+      'Sortino Ratio',
+      'Max Drawdown %',
+      'Win Rate %',
+      'Total Trades',
+      'Profit Factor',
+      'CAGR %',
+      'Volatility %',
+      'Expectancy',
+      'Status'
+    ];
+
+    // Build CSV rows
+    const rows: string[][] = [];
+    symbols.forEach(symbol => {
+      strategies.forEach(strategy => {
+        const key = getCellKey(symbol, strategy.name);
+        const cell = cells.get(key);
+
+        if (cell && cell.summary) {
+          const s = cell.summary;
+          rows.push([
+            symbol,
+            strategy.name,
+            s.total_return_pct !== undefined ? (s.total_return_pct * 100).toFixed(2) : 'N/A',
+            s.sharpe_ratio !== undefined ? s.sharpe_ratio.toFixed(2) : 'N/A',
+            s.sortino_ratio !== undefined ? s.sortino_ratio.toFixed(2) : 'N/A',
+            s.max_drawdown_pct !== undefined ? (s.max_drawdown_pct * 100).toFixed(2) : 'N/A',
+            s.win_rate !== undefined ? (s.win_rate * 100).toFixed(2) : 'N/A',
+            s.total_trades !== undefined ? s.total_trades.toString() : 'N/A',
+            s.profit_factor !== undefined ? s.profit_factor.toFixed(2) : 'N/A',
+            s.cagr !== undefined ? (s.cagr * 100).toFixed(2) : 'N/A',
+            s.volatility !== undefined ? (s.volatility * 100).toFixed(2) : 'N/A',
+            s.expectancy !== undefined ? s.expectancy.toFixed(2) : 'N/A',
+            s.status || 'N/A'
+          ]);
+        } else {
+          // Empty cell
+          rows.push([
+            symbol,
+            strategy.name,
+            ...Array(11).fill('Not Run')
+          ]);
+        }
+      });
+    });
+
+    // Convert to CSV string
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', `backtest_comparison_${startDate}_to_${endDate}.csv`);
+    link.style.visibility = 'hidden';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  },
+
+  // Save current configuration to localStorage
+  saveConfiguration: (name: string) => {
+    const { symbols, strategies, startDate, endDate, initialCapital, commission } = get();
+
+    const config = {
+      symbols,
+      strategies,
+      startDate,
+      endDate,
+      initialCapital,
+      commission,
+      savedAt: new Date().toISOString(),
+    };
+
+    const savedConfigs = JSON.parse(localStorage.getItem('backtestConfigurations') || '{}');
+    savedConfigs[name] = config;
+    localStorage.setItem('backtestConfigurations', JSON.stringify(savedConfigs));
+  },
+
+  // Load configuration from localStorage
+  loadConfiguration: (name: string) => {
+    const savedConfigs = JSON.parse(localStorage.getItem('backtestConfigurations') || '{}');
+    const config = savedConfigs[name];
+
+    if (!config) {
+      console.error(`Configuration "${name}" not found`);
+      return;
+    }
+
+    // Clear existing cells and load new configuration
+    set({
+      symbols: config.symbols,
+      strategies: config.strategies,
+      startDate: config.startDate,
+      endDate: config.endDate,
+      initialCapital: config.initialCapital,
+      commission: config.commission,
+      cells: new Map(),
+    });
+
+    // Recreate cells for new configuration
+    const newCells = new Map<string, MatrixCell>();
+    config.symbols.forEach((symbol: string) => {
+      config.strategies.forEach((strategy: StrategyConfig) => {
+        const key = getCellKey(symbol, strategy.name);
+        newCells.set(key, {
+          symbol,
+          strategy,
+          summary: null,
+          isLoading: false,
+          error: undefined,
+        });
+      });
+    });
+
+    set({ cells: newCells });
+  },
+
+  // Get list of saved configuration names
+  getSavedConfigurations: () => {
+    const savedConfigs = JSON.parse(localStorage.getItem('backtestConfigurations') || '{}');
+    return Object.keys(savedConfigs);
+  },
+
+  // Delete a saved configuration
+  deleteConfiguration: (name: string) => {
+    const savedConfigs = JSON.parse(localStorage.getItem('backtestConfigurations') || '{}');
+    delete savedConfigs[name];
+    localStorage.setItem('backtestConfigurations', JSON.stringify(savedConfigs));
   },
 }));

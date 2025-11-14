@@ -11,7 +11,7 @@ interface ComparisonCellProps {
   cell: MatrixCell;
 }
 
-export const ComparisonCell: React.FC<ComparisonCellProps> = ({ cell }) => {
+const ComparisonCellComponent: React.FC<ComparisonCellProps> = ({ cell }) => {
   const { selectCell, runCell, openTuning } = useComparisonStore();
   const { symbol, strategy, summary, isLoading, error } = cell;
 
@@ -34,8 +34,29 @@ export const ComparisonCell: React.FC<ComparisonCellProps> = ({ cell }) => {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-24 bg-dark-bg border border-dark-border rounded-lg">
-        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+      <div className="h-24 bg-dark-bg border border-primary/50 rounded-lg p-2 relative overflow-hidden">
+        {/* Animated gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent animate-shimmer"
+             style={{
+               backgroundSize: '200% 100%',
+               animation: 'shimmer 2s infinite'
+             }}
+        />
+
+        {/* Content skeleton */}
+        <div className="relative space-y-2">
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 text-primary animate-spin" />
+            <span className="text-xs text-primary font-medium">Running...</span>
+          </div>
+
+          {/* Skeleton placeholders */}
+          <div className="space-y-1.5">
+            <div className="h-3 bg-dark-border/50 rounded animate-pulse w-3/4"></div>
+            <div className="h-2 bg-dark-border/30 rounded animate-pulse w-1/2"></div>
+            <div className="h-2 bg-dark-border/30 rounded animate-pulse w-2/3"></div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -91,7 +112,7 @@ export const ComparisonCell: React.FC<ComparisonCellProps> = ({ cell }) => {
   return (
     <div
       onClick={handleClick}
-      className="h-24 bg-dark-bg border border-dark-border rounded-lg p-2 hover:border-primary/70 hover:shadow-lg transition-all cursor-pointer group relative"
+      className="h-24 bg-dark-bg border border-dark-border rounded-lg p-2 hover:border-primary/70 hover:shadow-lg transition-all cursor-pointer group relative animate-fadeIn"
     >
       {/* Tune button */}
       <button
@@ -142,3 +163,14 @@ export const ComparisonCell: React.FC<ComparisonCellProps> = ({ cell }) => {
     </div>
   );
 };
+
+// Memoize to prevent unnecessary re-renders
+export const ComparisonCell = React.memo(ComparisonCellComponent, (prevProps, nextProps) => {
+  // Only re-render if cell data actually changed
+  return (
+    prevProps.cell.isLoading === nextProps.cell.isLoading &&
+    prevProps.cell.error === nextProps.cell.error &&
+    prevProps.cell.summary?.backtest_id === nextProps.cell.summary?.backtest_id &&
+    prevProps.cell.summary?.total_return_pct === nextProps.cell.summary?.total_return_pct
+  );
+});

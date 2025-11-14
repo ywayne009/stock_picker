@@ -63,12 +63,12 @@ export const ParameterTuningModal: React.FC<ParameterTuningModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center p-6 z-50"
+      className="fixed inset-0 flex items-center justify-center p-6 z-50 animate-fadeIn"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
       onClick={onClose}
     >
       <div
-        className="rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl"
+        className="rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl animate-slideDown"
         style={{ backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: '1px' }}
         onClick={(e) => e.stopPropagation()}
       >

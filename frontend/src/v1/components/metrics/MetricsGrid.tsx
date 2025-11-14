@@ -8,7 +8,8 @@ import {
   Activity,
   Target,
   BarChart3,
-  Award
+  Award,
+  HelpCircle
 } from 'lucide-react';
 
 interface MetricsGridProps {
@@ -21,9 +22,10 @@ interface MetricCardProps {
   icon: React.ReactNode;
   trend?: 'positive' | 'negative' | 'neutral';
   suffix?: string;
+  tooltip?: string;
 }
 
-const MetricCard: React.FC<MetricCardProps> = ({ label, value, icon, trend = 'neutral', suffix = '' }) => {
+const MetricCardComponent: React.FC<MetricCardProps> = ({ label, value, icon, trend = 'neutral', suffix = '', tooltip }) => {
   const getTrendColor = () => {
     switch (trend) {
       case 'positive':
@@ -36,9 +38,20 @@ const MetricCard: React.FC<MetricCardProps> = ({ label, value, icon, trend = 'ne
   };
 
   return (
-    <div className="bg-dark-bg rounded-lg border border-dark-border p-2.5">
+    <div className="bg-dark-bg rounded-lg border border-dark-border p-2.5 relative group">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-dark-muted">{label}</span>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-dark-muted">{label}</span>
+          {tooltip && (
+            <div className="relative">
+              <HelpCircle className="w-3 h-3 text-dark-muted opacity-50 group-hover:opacity-100 transition-opacity cursor-help" />
+              <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-50 w-64 p-2 bg-dark-card border border-dark-border rounded shadow-lg text-xs text-dark-text">
+                {tooltip}
+                <div className="absolute left-2 top-full w-2 h-2 bg-dark-card border-r border-b border-dark-border transform rotate-45 -mt-1"></div>
+              </div>
+            </div>
+          )}
+        </div>
         <div className={`${getTrendColor()}`}>{React.cloneElement(icon as React.ReactElement, { className: 'w-3.5 h-3.5' })}</div>
       </div>
       <div className="flex items-baseline gap-1">
@@ -50,6 +63,9 @@ const MetricCard: React.FC<MetricCardProps> = ({ label, value, icon, trend = 'ne
     </div>
   );
 };
+
+// Memoize to prevent unnecessary re-renders
+const MetricCard = React.memo(MetricCardComponent);
 
 export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
   const formatPercent = (value: number): string => {
@@ -89,6 +105,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           value={formatCurrency(metrics.total_return)}
           icon={<DollarSign className="w-5 h-5" />}
           trend={getTrend(metrics.total_return)}
+          tooltip="Total profit or loss in dollars from all trades during the backtest period."
         />
 
         <MetricCard
@@ -97,6 +114,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           icon={<Percent className="w-5 h-5" />}
           trend={getTrend(metrics.total_return_pct)}
           suffix="%"
+          tooltip="Total return as a percentage of initial capital. Shows the overall strategy performance."
         />
 
         <MetricCard
@@ -105,6 +123,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           icon={<TrendingUp className="w-5 h-5" />}
           trend={getTrend(metrics.cagr)}
           suffix="%"
+          tooltip="Compound Annual Growth Rate - The annualized rate of return over the period. Higher is better."
         />
 
         <MetricCard
@@ -113,6 +132,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           icon={<TrendingDown className="w-5 h-5" />}
           trend="negative"
           suffix="%"
+          tooltip="Largest peak-to-trough decline in portfolio value. Measures the worst-case loss. Lower is better."
         />
 
         {/* Risk Metrics */}
@@ -121,6 +141,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           value={formatNumber(metrics.sharpe_ratio)}
           icon={<Activity className="w-5 h-5" />}
           trend={metrics.sharpe_ratio > 1 ? 'positive' : 'neutral'}
+          tooltip="Risk-adjusted return metric. Measures excess return per unit of risk. >1 is good, >2 is excellent."
         />
 
         <MetricCard
@@ -128,6 +149,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           value={formatNumber(metrics.sortino_ratio)}
           icon={<Activity className="w-5 h-5" />}
           trend={metrics.sortino_ratio > 1 ? 'positive' : 'neutral'}
+          tooltip="Similar to Sharpe but only penalizes downside volatility. Better measure for asymmetric returns."
         />
 
         <MetricCard
@@ -136,6 +158,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           icon={<Activity className="w-5 h-5" />}
           trend="neutral"
           suffix="%"
+          tooltip="Standard deviation of returns. Measures how much returns fluctuate. Higher means more risk."
         />
 
         <MetricCard
@@ -143,6 +166,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           value={formatNumber(metrics.profit_factor)}
           icon={<Award className="w-5 h-5" />}
           trend={metrics.profit_factor > 1 ? 'positive' : 'negative'}
+          tooltip="Ratio of gross profits to gross losses. >1 means profitable, >2 is strong. Accounts for win size vs loss size."
         />
 
         {/* Trade Statistics */}
@@ -151,6 +175,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           value={metrics.total_trades}
           icon={<Target className="w-5 h-5" />}
           trend="neutral"
+          tooltip="Total number of completed trades. More trades generally means more statistical significance."
         />
 
         <MetricCard
@@ -159,6 +184,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           icon={<Percent className="w-5 h-5" />}
           trend={metrics.win_rate > 0.5 ? 'positive' : 'negative'}
           suffix="%"
+          tooltip="Percentage of trades that were profitable. 50% means half your trades win. >60% is strong."
         />
 
         <MetricCard
@@ -166,6 +192,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           value={formatCurrency(metrics.avg_win)}
           icon={<TrendingUp className="w-5 h-5" />}
           trend="positive"
+          tooltip="Average profit per winning trade. Higher is better. Compare with Avg Loss for risk/reward ratio."
         />
 
         <MetricCard
@@ -173,6 +200,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           value={formatCurrency(metrics.avg_loss)}
           icon={<TrendingDown className="w-5 h-5" />}
           trend="negative"
+          tooltip="Average loss per losing trade. Smaller (closer to $0) is better. Compare with Avg Win."
         />
 
         <MetricCard
@@ -180,6 +208,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           value={formatCurrency(metrics.largest_win)}
           icon={<TrendingUp className="w-5 h-5" />}
           trend="positive"
+          tooltip="The single most profitable trade in the backtest period. Shows best-case potential."
         />
 
         <MetricCard
@@ -187,6 +216,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           value={formatCurrency(metrics.largest_loss)}
           icon={<TrendingDown className="w-5 h-5" />}
           trend="negative"
+          tooltip="The single worst losing trade in the backtest period. Shows worst-case risk."
         />
 
         <MetricCard
@@ -194,6 +224,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           value={formatCurrency(metrics.expectancy)}
           icon={<DollarSign className="w-5 h-5" />}
           trend={getTrend(metrics.expectancy)}
+          tooltip="Average expected profit per trade. Positive means profitable over time. Combines win rate and avg win/loss."
         />
 
         <MetricCard
@@ -201,6 +232,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
           value={`${metrics.winning_trades} / ${metrics.total_trades}`}
           icon={<Target className="w-5 h-5" />}
           trend="neutral"
+          tooltip="Number of profitable trades out of total trades. Same info as Win Rate but in absolute numbers."
         />
 
         {/* Buy and Hold Comparison */}
@@ -211,6 +243,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
             icon={<TrendingUp className="w-5 h-5" />}
             trend={getTrend(metrics.buy_hold_return)}
             suffix="%"
+            tooltip="Return from simply buying at start and holding until end (10% position, 90% cash). Baseline for comparison."
           />
         )}
 
@@ -221,6 +254,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({ metrics }) => {
             icon={<Award className="w-5 h-5" />}
             trend={getTrend(metrics.total_return_pct - metrics.buy_hold_return)}
             suffix="%"
+            tooltip="How much the strategy beat (or lost to) buy-and-hold. Positive means strategy added value."
           />
         )}
       </div>

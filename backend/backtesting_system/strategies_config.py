@@ -24,6 +24,22 @@ from app.services.strategy.examples.ma_crossover import (
     GoldenCross50_200,
     FastMACrossover
 )
+from app.services.strategy.examples.rsi_strategy import (
+    RSIOverboughtOversold,
+    RSI30_70,
+    RSI20_80
+)
+from app.services.strategy.examples.macd_strategy import (
+    MACDCrossover,
+    MACD_Standard,
+    MACD_ZeroLine
+)
+from app.services.strategy.examples.bollinger_strategy import (
+    BollingerBandMeanReversion,
+    BB_Standard,
+    BB_Tight,
+    BB_Wide
+)
 from app.services.strategy.registry import register_strategy
 from app.services.strategy.base_strategy import Strategy
 import pandas as pd
@@ -108,149 +124,18 @@ STRATEGY_HIGH_VOLATILITY = {
 
 
 # ==============================================================================
-# CUSTOM STRATEGY EXAMPLES
+# STRATEGY REGISTRATION
 # ==============================================================================
-# You can define your own strategies here by inheriting from Strategy.
+# Register our professional strategy implementations
 
-@register_strategy(
-    'rsi_oversold',
-    'Buy when RSI < 30, sell when RSI > 70',
-    category='mean_reversion'
-)
-class RSIOversoldStrategy(Strategy):
-    """
-    Simple RSI-based mean reversion strategy.
-
-    Buys when RSI drops below oversold threshold (default 30)
-    Sells when RSI rises above overbought threshold (default 70)
-    """
-
-    def setup(self, data: pd.DataFrame) -> None:
-        """Setup RSI parameters."""
-        self.rsi_period = self.parameters.get('rsi_period', 14)
-        self.oversold = self.parameters.get('oversold', 30)
-        self.overbought = self.parameters.get('overbought', 70)
-
-    def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Generate RSI-based signals."""
-        df = data.copy()
-
-        # Calculate RSI
-        delta = df['close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=self.rsi_period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=self.rsi_period).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-
-        # Generate signals
-        df['rsi'] = rsi
-        df['signal'] = 0
-        df.loc[rsi < self.oversold, 'signal'] = 1   # Buy when oversold
-        df.loc[rsi > self.overbought, 'signal'] = -1  # Sell when overbought
-
-        # Track position
-        df['position'] = df['signal'].replace(0, method='ffill').fillna(0)
-
-        return df
-
-
-@register_strategy(
-    'bollinger_bounce',
-    'Buy at lower band, sell at upper band',
-    category='mean_reversion'
-)
-class BollingerBounceStrategy(Strategy):
-    """
-    Bollinger Bands mean reversion strategy.
-
-    Buys when price touches lower band
-    Sells when price touches upper band
-    """
-
-    def setup(self, data: pd.DataFrame) -> None:
-        """Setup Bollinger Bands parameters."""
-        self.bb_period = self.parameters.get('bb_period', 20)
-        self.bb_std = self.parameters.get('bb_std', 2)
-
-    def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Generate Bollinger Bands signals."""
-        df = data.copy()
-
-        # Calculate Bollinger Bands
-        sma = df['close'].rolling(window=self.bb_period).mean()
-        std = df['close'].rolling(window=self.bb_period).std()
-        upper_band = sma + (self.bb_std * std)
-        lower_band = sma - (self.bb_std * std)
-
-        df['bb_upper'] = upper_band
-        df['bb_middle'] = sma
-        df['bb_lower'] = lower_band
-
-        # Generate signals
-        df['signal'] = 0
-        df.loc[df['close'] <= lower_band, 'signal'] = 1   # Buy at lower band
-        df.loc[df['close'] >= upper_band, 'signal'] = -1  # Sell at upper band
-
-        # Track position
-        df['position'] = df['signal'].replace(0, method='ffill').fillna(0)
-
-        return df
-
-
-@register_strategy(
-    'macd_crossover',
-    'MACD line crosses signal line',
-    category='trend'
-)
-class MACDCrossoverStrategy(Strategy):
-    """
-    MACD crossover strategy.
-
-    Buys when MACD line crosses above signal line
-    Sells when MACD line crosses below signal line
-    """
-
-    def setup(self, data: pd.DataFrame) -> None:
-        """Setup MACD parameters."""
-        self.fast_period = self.parameters.get('fast_period', 12)
-        self.slow_period = self.parameters.get('slow_period', 26)
-        self.signal_period = self.parameters.get('signal_period', 9)
-
-    def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Generate MACD signals."""
-        df = data.copy()
-
-        # Calculate MACD
-        ema_fast = df['close'].ewm(span=self.fast_period, adjust=False).mean()
-        ema_slow = df['close'].ewm(span=self.slow_period, adjust=False).mean()
-        macd_line = ema_fast - ema_slow
-        signal_line = macd_line.ewm(span=self.signal_period, adjust=False).mean()
-
-        df['macd'] = macd_line
-        df['macd_signal'] = signal_line
-        df['macd_histogram'] = macd_line - signal_line
-
-        # Generate signals on crossovers
-        df['signal'] = 0
-        df['prev_macd'] = macd_line.shift(1)
-        df['prev_signal'] = signal_line.shift(1)
-
-        # Buy: MACD crosses above signal
-        df.loc[
-            (macd_line > signal_line) & (df['prev_macd'] <= df['prev_signal']),
-            'signal'
-        ] = 1
-
-        # Sell: MACD crosses below signal
-        df.loc[
-            (macd_line < signal_line) & (df['prev_macd'] >= df['prev_signal']),
-            'signal'
-        ] = -1
-
-        # Track position
-        df['position'] = df['signal'].replace(0, method='ffill').fillna(0)
-
-        return df
+# Note: The old inline strategy classes have been replaced with professional
+# implementations in app/services/strategy/examples/
+# These new implementations include:
+# - Comprehensive parameter validation
+# - Optional trend filters
+# - Better signal detection (crossover-based vs level-based)
+# - More configuration options
+# - Better documentation
 
 
 # ==============================================================================
@@ -266,40 +151,141 @@ STRATEGY_PRESETS = {
     'day_trading': STRATEGY_DAY_TRADING,
     'high_volatility': STRATEGY_HIGH_VOLATILITY,
 
-    # Mean reversion
-    'rsi_oversold': {
-        'name': 'RSI Oversold Strategy',
+    # RSI Mean Reversion Strategies
+    'rsi_30_70': {
+        'name': 'RSI 30/70',
         'parameters': {
             'rsi_period': 14,
-            'oversold': 30,
-            'overbought': 70,
+            'oversold_threshold': 30,
+            'overbought_threshold': 70,
+            'use_trend_filter': False,
             'position_size': 0.10,
             'stop_loss': 0.05,
             'take_profit': 0.10
         }
     },
 
-    'bollinger_bounce': {
-        'name': 'Bollinger Bounce Strategy',
+    'rsi_20_80': {
+        'name': 'RSI 20/80 Conservative',
+        'parameters': {
+            'rsi_period': 14,
+            'oversold_threshold': 20,
+            'overbought_threshold': 80,
+            'use_trend_filter': False,
+            'position_size': 0.10,
+            'stop_loss': 0.05,
+            'take_profit': 0.15
+        }
+    },
+
+    'rsi_trend_filter': {
+        'name': 'RSI 30/70 with Trend Filter',
+        'parameters': {
+            'rsi_period': 14,
+            'oversold_threshold': 30,
+            'overbought_threshold': 70,
+            'use_trend_filter': True,
+            'trend_period': 200,
+            'position_size': 0.10,
+            'stop_loss': 0.05,
+            'take_profit': 0.12
+        }
+    },
+
+    # MACD Trend Following Strategies
+    'macd_standard': {
+        'name': 'MACD 12/26/9',
+        'parameters': {
+            'fast_period': 12,
+            'slow_period': 26,
+            'signal_period': 9,
+            'use_zero_line_filter': False,
+            'use_trend_filter': False,
+            'position_size': 0.15,
+            'stop_loss': 0.05,
+            'take_profit': 0.12
+        }
+    },
+
+    'macd_zero_line': {
+        'name': 'MACD Zero-Line Filter',
+        'parameters': {
+            'fast_period': 12,
+            'slow_period': 26,
+            'signal_period': 9,
+            'use_zero_line_filter': True,
+            'use_trend_filter': False,
+            'position_size': 0.15,
+            'stop_loss': 0.05,
+            'take_profit': 0.15
+        }
+    },
+
+    'macd_divergence': {
+        'name': 'MACD with Divergence Detection',
+        'parameters': {
+            'fast_period': 12,
+            'slow_period': 26,
+            'signal_period': 9,
+            'use_histogram_divergence': True,
+            'use_zero_line_filter': False,
+            'position_size': 0.15,
+            'stop_loss': 0.05,
+            'take_profit': 0.12
+        }
+    },
+
+    # Bollinger Band Mean Reversion Strategies
+    'bb_standard': {
+        'name': 'BB Mean Reversion 20,2',
         'parameters': {
             'bb_period': 20,
-            'bb_std': 2,
+            'bb_std_dev': 2.0,
+            'exit_at_middle': True,
+            'use_trend_filter': False,
             'position_size': 0.10,
             'stop_loss': 0.04,
             'take_profit': 0.08
         }
     },
 
-    # Trend following
-    'macd_crossover': {
-        'name': 'MACD Crossover Strategy',
+    'bb_tight': {
+        'name': 'BB Tight 20,1.5',
         'parameters': {
-            'fast_period': 12,
-            'slow_period': 26,
-            'signal_period': 9,
-            'position_size': 0.15,
+            'bb_period': 20,
+            'bb_std_dev': 1.5,
+            'exit_at_middle': True,
+            'use_trend_filter': False,
+            'position_size': 0.10,
+            'stop_loss': 0.03,
+            'take_profit': 0.06
+        }
+    },
+
+    'bb_wide': {
+        'name': 'BB Wide 20,2.5',
+        'parameters': {
+            'bb_period': 20,
+            'bb_std_dev': 2.5,
+            'exit_at_middle': True,
+            'use_trend_filter': False,
+            'position_size': 0.10,
             'stop_loss': 0.05,
-            'take_profit': 0.12
+            'take_profit': 0.10
+        }
+    },
+
+    'bb_trend_filter': {
+        'name': 'BB with Trend Filter',
+        'parameters': {
+            'bb_period': 20,
+            'bb_std_dev': 2.0,
+            'exit_at_middle': True,
+            'use_trend_filter': True,
+            'trend_period': 200,
+            'position_size': 0.10,
+            'stop_loss': 0.04,
+            'take_profit': 0.10
         }
     }
 }

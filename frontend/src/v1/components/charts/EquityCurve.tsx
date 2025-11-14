@@ -8,7 +8,7 @@ interface EquityCurveProps {
   initialCapital: number;
 }
 
-export const EquityCurve: React.FC<EquityCurveProps> = ({ equityCurve, initialCapital }) => {
+const EquityCurveComponent: React.FC<EquityCurveProps> = ({ equityCurve, initialCapital }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const equitySeriesRef = useRef<any>(null);
@@ -128,3 +128,6 @@ export const EquityCurve: React.FC<EquityCurveProps> = ({ equityCurve, initialCa
     </div>
   );
 };
+
+// Memoize to prevent unnecessary re-renders when data hasn't changed
+export const EquityCurve = React.memo(EquityCurveComponent);

@@ -3,7 +3,7 @@
  * Reuses V1 components for charts and tables
  */
 import React, { useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Printer } from 'lucide-react';
 import type { MatrixCell, StrategyConfig } from '../../types/comparison';
 import type { BacktestResults } from '../../types';
 
@@ -57,14 +57,18 @@ export const DetailedCellView: React.FC<DetailedCellViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'charts' | 'trades'>('overview');
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center p-6 z-50"
+      className="fixed inset-0 flex items-center justify-center p-6 z-50 animate-fadeIn"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
       onClick={onClose}
     >
       <div
-        className="rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
+        className="rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col animate-slideDown"
         style={{ backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: '1px' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -90,13 +94,23 @@ export const DetailedCellView: React.FC<DetailedCellViewProps> = ({
               </p>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg transition-colors hover:opacity-80"
-            style={{ backgroundColor: '#0f172a' }}
-          >
-            <X className="w-5 h-5" style={{ color: '#94a3b8' }} />
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors hover:opacity-90 print:hidden"
+              style={{ backgroundColor: '#3b82f6', color: '#ffffff' }}
+            >
+              <Printer className="w-4 h-4" />
+              <span className="text-sm">Print / PDF</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg transition-colors hover:opacity-80 print:hidden"
+              style={{ backgroundColor: '#0f172a' }}
+            >
+              <X className="w-5 h-5" style={{ color: '#94a3b8' }} />
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}

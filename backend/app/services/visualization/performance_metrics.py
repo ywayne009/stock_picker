@@ -248,6 +248,23 @@ def _simulate_portfolio(
         cash_values.append(cash)
         shares_values.append(shares)
 
+    # CRITICAL FIX: Force-liquidate any open position at end of period
+    # This ensures Total Return matches completed trades count
+    # If no trades were completed (shares still held), we close the position
+    # and calculate the realized return (including commission)
+    if shares > 0:
+        final_price = df.iloc[-1]['close']
+        proceeds = shares * final_price
+        commission_cost = proceeds * commission
+        cash += proceeds - commission_cost
+        shares = 0
+
+        # Update the final portfolio value to reflect forced liquidation
+        portfolio_values[-1] = cash
+        positions[-1] = 0
+        cash_values[-1] = cash
+        shares_values[-1] = shares
+
     df['portfolio_value'] = portfolio_values
     df['position'] = positions
     df['cash'] = cash_values
@@ -257,7 +274,13 @@ def _simulate_portfolio(
 
 
 def _extract_trades(portfolio_df: pd.DataFrame) -> list:
-    """Extract individual trades from portfolio history."""
+    """
+    Extract individual trades from portfolio history.
+
+    Only counts COMPLETED round-trips (buy → sell).
+    Open positions (buy without sell) are NOT counted as trades.
+    This ensures Total Trades metric is accurate.
+    """
     trades = []
     in_position = False
     entry_idx = None
@@ -273,7 +296,7 @@ def _extract_trades(portfolio_df: pd.DataFrame) -> list:
             entry_value = row['portfolio_value']
 
         elif row['position'] == 0 and in_position:
-            # Exited position
+            # Exited position - this is a COMPLETED trade
             in_position = False
             exit_price = row['close']
             exit_value = row['portfolio_value']
@@ -290,6 +313,10 @@ def _extract_trades(portfolio_df: pd.DataFrame) -> list:
                 'return': (exit_price - entry_price) / entry_price,
                 'duration': duration
             })
+
+    # Note: Open positions (if in_position is still True) are NOT counted as completed trades
+    # The Total Return metric will still reflect unrealized P&L from open positions
+    # This is correct behavior: trades must be complete round-trips
 
     return trades
 
