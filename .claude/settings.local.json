@@ -30,7 +30,15 @@
       "Bash(open http://localhost:5173)",
       "Bash(uvicorn app.main:app:*)",
       "Bash(find:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(app/models/__init__.py)",
+      "Bash(app/schemas/__init__.py)",
+      "Bash(app/core/__init__.py)",
+      "Bash(tree:*)",
+      "Bash(tee:*)",
+      "Bash(timeout 180 python3:*)",
+      "Bash(/tmp/phase3_fixed_results.txt)",
+      "Bash(cat /tmp/phase3_fixed_results.txt)"
     ],
     "deny": [],
     "ask": []

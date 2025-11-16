@@ -1,2 +1,4 @@
-Great! All three Phase 1 strategies are now implemented. Let me update the strategy registry and test
-   them:
+  Todos
+  ☒ Fix Phase 3 strategies to use numeric signals (1/-1/0) instead of strings
+  ☐ Re-run Phase 3 test suite with fixed strategies
+  ☐ Update backend strategy map with Phase 3 strategies

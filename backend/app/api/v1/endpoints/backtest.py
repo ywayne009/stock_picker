@@ -29,6 +29,37 @@ from app.api.v1.schemas import (
 )
 from app.services.backtesting.engine import BacktestEngine
 from app.services.strategy.examples.ma_crossover import MovingAverageCrossover
+from app.services.strategy.examples.rsi_strategy import (
+    RSIOverboughtOversold,
+    RSI30_70,
+    RSI20_80
+)
+from app.services.strategy.examples.macd_strategy import (
+    MACDCrossover,
+    MACD_Standard,
+    MACD_ZeroLine
+)
+from app.services.strategy.examples.bollinger_strategy import (
+    BollingerBandMeanReversion,
+    BB_Standard,
+    BB_Tight,
+    BB_Wide
+)
+from app.services.strategy.examples.adx_strategy import (
+    ADX25,
+    ADX30Conservative,
+    ADX20Aggressive
+)
+from app.services.strategy.examples.stochastic_strategy import (
+    Stochastic14_3,
+    StochasticSlow,
+    StochasticFast
+)
+from app.services.strategy.examples.donchian_strategy import (
+    Donchian20_10,
+    Donchian50_25,
+    Donchian10_5Fast
+)
 from app.services.data import fetch_stock_data
 
 # Import strategy configurations
@@ -58,14 +89,52 @@ def _create_strategy_instance(strategy_config: dict):
     strategy_type = strategy_config.get('type', 'ma_crossover')
     parameters = strategy_config.get('parameters', {})
 
-    # For now, we primarily use MovingAverageCrossover
-    # In the future, we can map different strategy types to different classes
     config = {
         'name': strategy_config.get('name', 'Custom Strategy'),
         'parameters': parameters
     }
 
-    return MovingAverageCrossover(config)
+    # Strategy type mapping
+    strategy_map = {
+        # Moving Average strategies
+        'ma_crossover': MovingAverageCrossover,
+
+        # RSI strategies
+        'rsi': RSIOverboughtOversold,
+        'rsi_30_70': RSI30_70,
+        'rsi_20_80': RSI20_80,
+
+        # MACD strategies
+        'macd': MACDCrossover,
+        'macd_standard': MACD_Standard,
+        'macd_zero_line': MACD_ZeroLine,
+
+        # Bollinger Band strategies
+        'bollinger': BollingerBandMeanReversion,
+        'bb_standard': BB_Standard,
+        'bb_tight': BB_Tight,
+        'bb_wide': BB_Wide,
+
+        # ADX Trend Strength strategies
+        'adx_25': ADX25,
+        'adx_30': ADX30Conservative,
+        'adx_20': ADX20Aggressive,
+
+        # Stochastic Oscillator strategies
+        'stochastic': Stochastic14_3,
+        'stochastic_14_3': Stochastic14_3,
+        'stochastic_slow': StochasticSlow,
+        'stochastic_fast': StochasticFast,
+
+        # Donchian Channel strategies
+        'donchian': Donchian20_10,
+        'donchian_20_10': Donchian20_10,
+        'donchian_50_25': Donchian50_25,
+        'donchian_10_5': Donchian10_5Fast,
+    }
+
+    strategy_class = strategy_map.get(strategy_type, MovingAverageCrossover)
+    return strategy_class(config)
 
 
 def _convert_metrics_to_schema(metrics) -> PerformanceMetrics:
@@ -640,3 +709,222 @@ async def get_backtest_summary(backtest_id: str):
         win_rate=metrics.win_rate,
         error_message=None
     )
+
+
+@router.get("/strategies/")
+async def list_available_strategies():
+    """
+    Get list of all available strategies with their configurations.
+
+    Returns:
+        List of strategy definitions with names, types, parameters, and descriptions
+    """
+    strategies = [
+        # Phase 1: Moving Average Strategies
+        {
+            "id": "ma_crossover",
+            "name": "MA Crossover 20/50 SMA",
+            "type": "ma_crossover",
+            "category": "Trend Following",
+            "phase": 1,
+            "description": "Classic moving average crossover using 20 and 50 period SMAs",
+            "default_params": {
+                "fast_period": 20,
+                "slow_period": 50,
+                "ma_type": "sma"
+            },
+            "parameters": []
+        },
+
+        # Phase 1: RSI Strategies
+        {
+            "id": "rsi_30_70",
+            "name": "RSI 30/70",
+            "type": "rsi_30_70",
+            "category": "Mean Reversion",
+            "phase": 1,
+            "description": "RSI mean reversion strategy with 30/70 overbought/oversold levels",
+            "default_params": {
+                "rsi_period": 14,
+                "oversold_threshold": 30,
+                "overbought_threshold": 70
+            },
+            "parameters": []
+        },
+        {
+            "id": "rsi_20_80",
+            "name": "RSI 20/80 Conservative",
+            "type": "rsi_20_80",
+            "category": "Mean Reversion",
+            "phase": 1,
+            "description": "Conservative RSI strategy with stricter 20/80 thresholds",
+            "default_params": {
+                "rsi_period": 14,
+                "oversold_threshold": 20,
+                "overbought_threshold": 80
+            },
+            "parameters": []
+        },
+
+        # Phase 1: MACD Strategies
+        {
+            "id": "macd_standard",
+            "name": "MACD 12/26/9",
+            "type": "macd_standard",
+            "category": "Momentum",
+            "phase": 1,
+            "description": "Standard MACD crossover strategy with signal line",
+            "default_params": {
+                "fast_period": 12,
+                "slow_period": 26,
+                "signal_period": 9
+            },
+            "parameters": []
+        },
+
+        # Phase 1: Bollinger Band Strategies
+        {
+            "id": "bb_standard",
+            "name": "Bollinger Band 20,2",
+            "type": "bb_standard",
+            "category": "Mean Reversion",
+            "phase": 1,
+            "description": "Bollinger Bands mean reversion with 20-period and 2 standard deviations",
+            "default_params": {
+                "period": 20,
+                "std_dev": 2.0
+            },
+            "parameters": []
+        },
+
+        # Phase 2: ADX Strategies
+        {
+            "id": "adx_25",
+            "name": "ADX Trend 25",
+            "type": "adx_25",
+            "category": "Trend Following",
+            "phase": 2,
+            "description": "Trend strength filter using ADX > 25 with directional indicators",
+            "default_params": {
+                "adx_period": 14,
+                "adx_threshold": 25
+            },
+            "parameters": []
+        },
+        {
+            "id": "adx_30",
+            "name": "ADX Trend 30 Conservative",
+            "type": "adx_30",
+            "category": "Trend Following",
+            "phase": 2,
+            "description": "Conservative ADX strategy requiring very strong trends (ADX > 30)",
+            "default_params": {
+                "adx_period": 14,
+                "adx_threshold": 30
+            },
+            "parameters": []
+        },
+        {
+            "id": "adx_20",
+            "name": "ADX Trend 20 Aggressive",
+            "type": "adx_20",
+            "category": "Trend Following",
+            "phase": 2,
+            "description": "Aggressive ADX strategy with lower threshold (ADX > 20)",
+            "default_params": {
+                "adx_period": 14,
+                "adx_threshold": 20
+            },
+            "parameters": []
+        },
+
+        # Phase 2: Stochastic Strategies
+        {
+            "id": "stochastic_14_3",
+            "name": "Stochastic 14,3",
+            "type": "stochastic_14_3",
+            "category": "Mean Reversion",
+            "phase": 2,
+            "description": "Classic stochastic oscillator with %K/%D crossovers in extreme zones",
+            "default_params": {
+                "k_period": 14,
+                "d_period": 3,
+                "oversold_level": 20,
+                "overbought_level": 80
+            },
+            "parameters": []
+        },
+        {
+            "id": "stochastic_slow",
+            "name": "Stochastic Slow 14,3,3",
+            "type": "stochastic_slow",
+            "category": "Mean Reversion",
+            "phase": 2,
+            "description": "Slow stochastic with additional smoothing for reduced noise",
+            "default_params": {
+                "k_period": 14,
+                "d_period": 6,
+                "oversold_level": 20,
+                "overbought_level": 80
+            },
+            "parameters": []
+        },
+        {
+            "id": "stochastic_fast",
+            "name": "Stochastic Fast 5,3",
+            "type": "stochastic_fast",
+            "category": "Mean Reversion",
+            "phase": 2,
+            "description": "Fast stochastic for quick signals in volatile markets",
+            "default_params": {
+                "k_period": 5,
+                "d_period": 3,
+                "oversold_level": 20,
+                "overbought_level": 80
+            },
+            "parameters": []
+        },
+
+        # Phase 2: Donchian Channel Strategies
+        {
+            "id": "donchian_20_10",
+            "name": "Donchian 20/10 (Turtle)",
+            "type": "donchian_20_10",
+            "category": "Trend Following",
+            "phase": 2,
+            "description": "Classic Turtle Trader breakout system with 20-day entry, 10-day exit",
+            "default_params": {
+                "entry_period": 20,
+                "exit_period": 10
+            },
+            "parameters": []
+        },
+        {
+            "id": "donchian_50_25",
+            "name": "Donchian 50/25 Long-term",
+            "type": "donchian_50_25",
+            "category": "Trend Following",
+            "phase": 2,
+            "description": "Long-term Donchian Channel breakout for position traders",
+            "default_params": {
+                "entry_period": 50,
+                "exit_period": 25
+            },
+            "parameters": []
+        },
+        {
+            "id": "donchian_10_5",
+            "name": "Donchian 10/5 Fast",
+            "type": "donchian_10_5",
+            "category": "Trend Following",
+            "phase": 2,
+            "description": "Fast Donchian Channel for active trading with frequent signals",
+            "default_params": {
+                "entry_period": 10,
+                "exit_period": 5
+            },
+            "parameters": []
+        },
+    ]
+
+    return {"strategies": strategies, "total": len(strategies)}

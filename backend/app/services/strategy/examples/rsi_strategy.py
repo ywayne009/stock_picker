@@ -21,6 +21,42 @@ import numpy as np
 
 from ..base_strategy import Strategy
 from ..indicators import rsi, sma
+from ..strategy_types import (
+    StrategyType,
+    StrategyCategory,
+    MarketRegime,
+    TimeFrame,
+    StrategyMetadata
+)
+from ..strategy_factory import register_strategy
+
+
+# Define metadata for RSI strategy
+RSI_METADATA = StrategyMetadata(
+    strategy_type=StrategyType.SIGNAL,
+    category=StrategyCategory.MEAN_REVERSION,
+    best_market_regime=[MarketRegime.RANGING, MarketRegime.LOW_VOLATILITY],
+    typical_timeframe=TimeFrame.SWING,
+    complexity="simple",
+    requires_indicators=['RSI'],
+    min_data_points=30,
+    suitable_for_beginners=True,
+    description="Mean reversion strategy using RSI oversold/overbought levels",
+    pros=[
+        "High win rate in ranging markets",
+        "Clear entry/exit signals",
+        "Works well with trend filter",
+        "Simple to understand"
+    ],
+    cons=[
+        "Fails in strong trends",
+        "Price can stay oversold/overbought",
+        "Fewer trades with strict thresholds"
+    ],
+    tags=["rsi", "mean_reversion", "oscillator", "oversold", "overbought"],
+    author="System",
+    version="1.0.0"
+)
 
 
 class RSIOverboughtOversold(Strategy):
@@ -143,8 +179,9 @@ class RSIOverboughtOversold(Strategy):
         if self.use_trend_filter:
             df['trend_sma'] = sma(df['close'], self.trend_period)
 
-        # Initialize signal column
+        # Initialize signal and position columns
         df['signal'] = 0
+        df['position'] = 0
 
         # Detect RSI crossovers
         df['prev_rsi'] = df['rsi'].shift(1)
@@ -161,14 +198,10 @@ class RSIOverboughtOversold(Strategy):
             downtrend = df['close'] < df['trend_sma']
 
             df.loc[oversold_cross & uptrend, 'signal'] = 1
-            # Sell when overbought OR price breaks below trend
-            df.loc[overbought_cross | (df['position'].shift(1) == 1) & downtrend, 'signal'] = -1
+            df.loc[overbought_cross, 'signal'] = -1
         else:
             df.loc[oversold_cross, 'signal'] = 1
             df.loc[overbought_cross, 'signal'] = -1
-
-        # Calculate position (持仓状态)
-        df['position'] = 0
 
         # Forward fill signals to maintain positions
         start_idx = self.rsi_period + 1
@@ -180,6 +213,10 @@ class RSIOverboughtOversold(Strategy):
                 df.loc[df.index[i:], 'position'] = 1
             elif df['signal'].iloc[i] == -1:  # Sell signal
                 df.loc[df.index[i:], 'position'] = 0
+            elif self.use_trend_filter and df['position'].iloc[i-1] == 1:
+                # Check if we should exit due to trend break (only if we have a position)
+                if df['close'].iloc[i] < df['trend_sma'].iloc[i]:
+                    df.loc[df.index[i:], 'position'] = 0
 
         # Clean up temporary columns
         df.drop(['prev_rsi'], axis=1, inplace=True)
@@ -235,6 +272,11 @@ class RSI30_70(RSIOverboughtOversold):
         super().__init__(config)
 
 
+# Register with factory
+register_strategy('rsi', RSI_METADATA)(RSIOverboughtOversold)
+register_strategy('rsi_30_70', RSI_METADATA)(RSI30_70)
+
+
 class RSI20_80(RSIOverboughtOversold):
     """
     Conservative RSI strategy using 20/80 thresholds.
@@ -260,3 +302,7 @@ class RSI20_80(RSIOverboughtOversold):
         config['parameters']['overbought_threshold'] = config['parameters'].get('overbought_threshold', 80)
 
         super().__init__(config)
+
+
+# Register conservative variant
+register_strategy('rsi_20_80', RSI_METADATA)(RSI20_80)

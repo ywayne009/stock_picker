@@ -101,7 +101,7 @@ export const useComparisonStore = create<ComparisonStore>((set, get) => ({
   // Load available strategies from API
   loadAvailableStrategies: async () => {
     try {
-      const response = await apiClient.get('/strategies/');
+      const response = await apiClient.get('/backtest/strategies/');
       set({ availableStrategies: response.data.strategies });
 
       // Auto-select first 3 strategies

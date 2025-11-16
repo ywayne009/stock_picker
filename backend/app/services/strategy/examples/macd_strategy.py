@@ -153,8 +153,9 @@ class MACDCrossover(Strategy):
         if self.use_trend_filter:
             df['trend_sma'] = sma(df['close'], self.trend_period)
 
-        # Initialize signal column
+        # Initialize signal and position columns
         df['signal'] = 0
+        df['position'] = 0
 
         # Detect MACD crossovers
         df['prev_macd'] = df['macd'].shift(1)
@@ -176,11 +177,7 @@ class MACDCrossover(Strategy):
         if self.use_trend_filter:
             # Only buy in uptrend
             uptrend = df['close'] > df['trend_sma']
-            downtrend = df['close'] < df['trend_sma']
-
             bullish_cross = bullish_cross & uptrend
-            # Sell when bearish cross OR trend breaks down
-            bearish_cross = bearish_cross | ((df['position'].shift(1) == 1) & downtrend)
 
         # Set signals
         df.loc[bullish_cross, 'signal'] = 1
@@ -189,9 +186,6 @@ class MACDCrossover(Strategy):
         # Histogram divergence detection (optional advanced feature)
         if self.use_histogram_divergence:
             df = self._detect_divergence(df)
-
-        # Calculate position (持仓状态)
-        df['position'] = 0
 
         # Forward fill signals to maintain positions
         start_idx = self.slow_period + self.signal_period + 1
@@ -203,6 +197,10 @@ class MACDCrossover(Strategy):
                 df.loc[df.index[i:], 'position'] = 1
             elif df['signal'].iloc[i] == -1:  # Sell signal
                 df.loc[df.index[i:], 'position'] = 0
+            elif self.use_trend_filter and df['position'].iloc[i-1] == 1:
+                # Check if we should exit due to trend break (only if we have a position)
+                if df['close'].iloc[i] < df['trend_sma'].iloc[i]:
+                    df.loc[df.index[i:], 'position'] = 0
 
         # Clean up temporary columns
         df.drop(['prev_macd', 'prev_signal'], axis=1, inplace=True)

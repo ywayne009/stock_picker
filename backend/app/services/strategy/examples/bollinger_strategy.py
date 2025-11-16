@@ -146,7 +146,7 @@ class BollingerBandMeanReversion(Strategy):
         if self.use_trend_filter:
             df['trend_sma'] = sma(df['close'], self.trend_period)
 
-        # Initialize signal column
+        # Initialize signal and position columns
         df['signal'] = 0
         df['position'] = 0
 
@@ -167,22 +167,10 @@ class BollingerBandMeanReversion(Strategy):
         # Apply trend filter if enabled
         if self.use_trend_filter:
             uptrend = df['close'] > df['trend_sma']
-            downtrend = df['close'] < df['trend_sma']
 
             # Only buy dips in uptrend
             df.loc[lower_band_touch & uptrend, 'signal'] = 1
-
-            # Sell when price touches upper band OR trend breaks down
-            if self.exit_at_middle:
-                # Exit on middle band return OR upper band touch OR trend break
-                exit_condition = upper_band_touch | middle_band_return | downtrend
-            else:
-                exit_condition = upper_band_touch | downtrend
-
-            # Mark exits
-            for i in range(len(df)):
-                if df['position'].iloc[i-1] == 1 and exit_condition.iloc[i]:
-                    df.loc[df.index[i], 'signal'] = -1
+            df.loc[upper_band_touch, 'signal'] = -1
         else:
             # No trend filter - pure mean reversion
             df.loc[lower_band_touch, 'signal'] = 1
@@ -193,7 +181,7 @@ class BollingerBandMeanReversion(Strategy):
             else:
                 df.loc[upper_band_touch, 'signal'] = -1
 
-        # Calculate position (持仓状态)
+        # Forward fill signals to maintain positions
         start_idx = self.bb_period + 1
         if self.use_trend_filter:
             start_idx = max(start_idx, self.trend_period)
@@ -203,6 +191,14 @@ class BollingerBandMeanReversion(Strategy):
                 df.loc[df.index[i:], 'position'] = 1
             elif df['signal'].iloc[i] == -1:  # Sell signal
                 df.loc[df.index[i:], 'position'] = 0
+            elif self.use_trend_filter and self.exit_at_middle and df['position'].iloc[i-1] == 1:
+                # Check for exit conditions when trend filter is enabled
+                if df['close'].iloc[i] < df['trend_sma'].iloc[i]:
+                    # Trend broke down
+                    df.loc[df.index[i:], 'position'] = 0
+                elif middle_band_return is not None and middle_band_return.iloc[i]:
+                    # Price returned to middle band
+                    df.loc[df.index[i:], 'position'] = 0
 
         # Clean up temporary columns
         if 'prev_close' in df.columns:

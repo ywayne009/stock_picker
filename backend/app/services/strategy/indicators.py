@@ -308,3 +308,129 @@ def calculate_volatility(close: pd.Series, period: int = 20) -> pd.Series:
     volatility = returns.rolling(window=period).std() * np.sqrt(252)  # Annualized
 
     return volatility
+
+
+def donchian_channel(
+    high: pd.Series,
+    low: pd.Series,
+    period: int = 20
+) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    """
+    Donchian Channel (price channel based on highest high and lowest low).
+
+    Args:
+        high: High prices
+        low: Low prices
+        period: Number of periods for channel calculation (default: 20)
+
+    Returns:
+        Tuple of (upper_channel, middle_channel, lower_channel)
+    """
+    upper_channel = high.rolling(window=period, min_periods=period).max()
+    lower_channel = low.rolling(window=period, min_periods=period).min()
+    middle_channel = (upper_channel + lower_channel) / 2
+
+    return upper_channel, middle_channel, lower_channel
+
+
+# ============================================================================
+# Volume-Based Indicators (Phase 3)
+# ============================================================================
+
+def obv(close: pd.Series, volume: pd.Series) -> pd.Series:
+    """
+    On-Balance Volume (OBV).
+
+    Cumulative volume indicator that adds volume on up days and subtracts on down days.
+    Rising OBV confirms uptrend, falling OBV confirms downtrend.
+    Divergences between price and OBV can signal reversals.
+
+    Args:
+        close: Close prices
+        volume: Volume data
+
+    Returns:
+        Series with OBV values
+    """
+    # Calculate price direction
+    price_change = close.diff()
+
+    # Create signed volume (positive on up days, negative on down days, zero on unchanged)
+    signed_volume = pd.Series(index=close.index, dtype=float)
+    signed_volume[price_change > 0] = volume[price_change > 0]
+    signed_volume[price_change < 0] = -volume[price_change < 0]
+    signed_volume[price_change == 0] = 0
+
+    # Cumulative sum
+    obv_values = signed_volume.cumsum()
+
+    return obv_values
+
+
+def accumulation_distribution(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    volume: pd.Series
+) -> pd.Series:
+    """
+    Accumulation/Distribution Line (A/D Line).
+
+    Volume-weighted indicator that measures buying/selling pressure.
+    Uses the close location value (CLV) relative to the high-low range.
+    Rising A/D suggests accumulation, falling A/D suggests distribution.
+
+    Args:
+        high: High prices
+        low: Low prices
+        close: Close prices
+        volume: Volume data
+
+    Returns:
+        Series with A/D line values
+    """
+    # Money Flow Multiplier (MFM)
+    # MFM = [(Close - Low) - (High - Close)] / (High - Low)
+    # Ranges from -1 (close at low) to +1 (close at high)
+    clv = ((close - low) - (high - close)) / (high - low)
+
+    # Handle division by zero (high == low)
+    clv = clv.fillna(0)
+
+    # Money Flow Volume = MFM * Volume
+    mfv = clv * volume
+
+    # A/D Line is cumulative sum of Money Flow Volume
+    ad_line = mfv.cumsum()
+
+    return ad_line
+
+
+def vwma(close: pd.Series, volume: pd.Series, period: int) -> pd.Series:
+    """
+    Volume-Weighted Moving Average (VWMA).
+
+    A moving average that gives more weight to periods with higher volume.
+    More responsive to high-volume price moves than simple MA.
+
+    Args:
+        close: Close prices
+        volume: Volume data
+        period: Number of periods for the moving average
+
+    Returns:
+        Series with VWMA values
+    """
+    # Calculate price * volume
+    pv = close * volume
+
+    # Sum of (price * volume) over period
+    pv_sum = pv.rolling(window=period, min_periods=period).sum()
+
+    # Sum of volume over period
+    volume_sum = volume.rolling(window=period, min_periods=period).sum()
+
+    # VWMA = sum(price * volume) / sum(volume)
+    vwma_values = pv_sum / volume_sum
+
+    return vwma_values

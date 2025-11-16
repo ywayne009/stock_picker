@@ -6,11 +6,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import routers
-from app.api.v1.endpoints import data, strategies, backtest
+from app.api.v1.endpoints import data, backtest
 
 app = FastAPI(
     title="Stock Picking Tool API",
-    description="AI-powered stock picking and backtesting platform",
+    description="Backtesting platform for trading strategies",
     version="1.0.0"
 )
 
@@ -24,7 +24,6 @@ app.add_middleware(
 
 # Include routers
 app.include_router(data.router, prefix="/api/v1/data", tags=["data"])
-app.include_router(strategies.router, prefix="/api/v1/strategies", tags=["strategies"])
 app.include_router(backtest.router, prefix="/api/v1/backtest", tags=["backtest"])
 
 @app.get("/")

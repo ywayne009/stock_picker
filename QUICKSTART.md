@@ -158,4 +158,22 @@ docker-compose -f docker-compose.services.yml up -d
 5. See changes reflected immediately
 6. When done, Ctrl+C and `docker-compose down`
 
+## start backend and frontend servers:
+  Terminal 1 - Backend Server
+  cd /home/wayne/main/labs/stock_picker/backend
+  source venv/bin/activate
+  uvicorn app.main:app --reload
+
+  The backend will start on http://localhost:8000
+  - API Docs: http://localhost:8000/docs
+
+  Terminal 2 - Frontend Server
+  cd /home/wayne/main/labs/stock_picker/frontend
+  npm run dev
+
+  The frontend will start on http://localhost:5173 (Vite default) or http://localhost:3000
+
+  ---
+  🧪 Testing the New Strategies
+
 Happy trading! 📈

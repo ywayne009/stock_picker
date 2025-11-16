@@ -31,8 +31,32 @@ class SignalType(str, Enum):
 
 class StrategyType(str, Enum):
     """Available strategy types"""
+    # Classic MA strategies
     MA_CROSSOVER = "ma_crossover"
     GOLDEN_CROSS = "golden_cross"
+
+    # Phase 1: Signal strategies
+    RSI_30_70 = "rsi_30_70"
+    RSI_20_80 = "rsi_20_80"
+    MACD_STANDARD = "macd_standard"
+    BB_STANDARD = "bb_standard"
+
+    # Phase 2: ADX strategies
+    ADX_25 = "adx_25"
+    ADX_30 = "adx_30"
+    ADX_20 = "adx_20"
+
+    # Phase 2: Stochastic strategies
+    STOCHASTIC_14_3 = "stochastic_14_3"
+    STOCHASTIC_SLOW = "stochastic_slow"
+    STOCHASTIC_FAST = "stochastic_fast"
+
+    # Phase 2: Donchian strategies
+    DONCHIAN_20_10 = "donchian_20_10"
+    DONCHIAN_50_25 = "donchian_50_25"
+    DONCHIAN_10_5 = "donchian_10_5"
+
+    # Legacy
     RSI = "rsi"
     MACD = "macd"
     CUSTOM = "custom"
